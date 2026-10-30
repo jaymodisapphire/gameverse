@@ -62,6 +62,14 @@ function GameLauncherContent() {
       router.replace('/games/teen-patti');
       return;
     }
+    if (slug === 'ludo') {
+      router.replace('/games/ludo');
+      return;
+    }
+    if (slug === 'tic-tac-toe') {
+      router.replace('/games/tic-tac-toe');
+      return;
+    }
     if (!game) return;
     const initialHigh = getLocalHighScore(game.slug);
     setHighScore(initialHigh);

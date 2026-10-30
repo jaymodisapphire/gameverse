@@ -1,10 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import GameCard from './GameCard';
 import { GAMES } from '@/lib/data';
 
 export default function FeaturedGames() {
+  const router = useRouter();
   return (
     <section id="games" className="relative py-24 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
@@ -53,7 +55,8 @@ export default function FeaturedGames() {
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="px-8 py-3.5 rounded-2xl border border-white/10 hover:border-violet-500/40 bg-white/3 hover:bg-violet-500/10 text-white/70 hover:text-white font-semibold text-sm transition-all"
+            onClick={() => router.push('/games')}
+            className="px-8 py-3.5 rounded-2xl border border-white/10 hover:border-violet-500/40 bg-white/3 hover:bg-violet-500/10 text-white/70 hover:text-white font-semibold text-sm transition-all cursor-pointer"
           >
             View All Games →
           </motion.button>

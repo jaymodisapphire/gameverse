@@ -272,3 +272,89 @@ test('--- Admin Chip Grants & Chip Request Approvals ---', async (t) => {
     assert.equal(finalBalance, startBalance, 'Rejected request must NOT credit any chips');
   });
 });
+
+
+test('--- Teen Patti Side Show (Sideshow) Engine ---', async (t) => {
+  const { requestSideShow, getPreviousActivePlayer } = await import('../../src/lib/teen-patti/table-manager');
+
+  await t.test('1. Side Show compares hands and folds player with lower hand', () => {
+    const mockTable: any = {
+      id: 'test-table-1',
+      roomCode: 'TP-TEST',
+      tableName: 'Test Table',
+      tableType: 'public',
+      status: 'active',
+      bootAmount: 1000,
+      currentStake: 1000,
+      pot: 6000,
+      maxPlayers: 6,
+      dealerSeat: 0,
+      currentTurnSeat: 1,
+      players: [
+        {
+          userId: 'player-0',
+          username: 'Seat0',
+          playerId: 'GV-000',
+          avatarUrl: 'GV',
+          seatNumber: 0,
+          chips: 50000,
+          currentBet: 2000,
+          totalRoundContribution: 2000,
+          state: 'seen',
+          cards: [
+            { suit: 'hearts', rank: 14 },
+            { suit: 'diamonds', rank: 14 },
+            { suit: 'spades', rank: 14 }, // Trail of Aces
+          ],
+        },
+        {
+          userId: 'player-1',
+          username: 'Seat1',
+          playerId: 'GV-001',
+          avatarUrl: 'GV',
+          seatNumber: 1,
+          chips: 50000,
+          currentBet: 2000,
+          totalRoundContribution: 2000,
+          state: 'seen',
+          cards: [
+            { suit: 'hearts', rank: 10 },
+            { suit: 'diamonds', rank: 7 },
+            { suit: 'spades', rank: 4 }, // High Card
+          ],
+        },
+        {
+          userId: 'player-2',
+          username: 'Seat2',
+          playerId: 'GV-002',
+          avatarUrl: 'GV',
+          seatNumber: 2,
+          chips: 50000,
+          currentBet: 2000,
+          totalRoundContribution: 2000,
+          state: 'seen',
+          cards: [
+            { suit: 'hearts', rank: 13 },
+            { suit: 'diamonds', rank: 13 },
+            { suit: 'spades', rank: 13 }, // Trail of Kings
+          ],
+        },
+        null,
+        null,
+        null,
+      ],
+      roundCount: 1,
+      dealer: { message: '', emotion: 'turn', isMuted: true, animationsEnabled: false },
+    };
+
+    const prevPlayer = getPreviousActivePlayer(mockTable, 1);
+    assert.equal(prevPlayer?.userId, 'player-0');
+
+    // Seat 1 (High card) asks side show against Seat 0 (Trail of Aces)
+    const updated = requestSideShow(mockTable, 'player-1');
+    assert.equal(updated.players[1]?.state, 'folded', 'Player 1 had weaker hand and should fold');
+    assert.equal(updated.players[0]?.state, 'seen', 'Player 0 had stronger hand and remains active');
+    assert.equal(updated.currentTurnSeat, 2, 'Turn must advance to Seat 2');
+    assert.equal(updated.lastAction?.action, 'sideshow');
+  });
+});

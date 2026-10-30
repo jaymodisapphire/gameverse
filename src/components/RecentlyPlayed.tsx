@@ -2,10 +2,12 @@
 
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { Play, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GAMES } from '@/lib/data';
 
 export default function RecentlyPlayed() {
+  const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (dir: 'left' | 'right') => {
@@ -76,6 +78,7 @@ export default function RecentlyPlayed() {
               viewport={{ once: true }}
               transition={{ delay: i * 0.08 }}
               whileHover={{ y: -4 }}
+              onClick={() => router.push(game.route)}
               className="flex-none w-64 rounded-2xl overflow-hidden border border-white/8 hover:border-white/20 transition-all duration-300 cursor-pointer group"
               style={{ background: 'linear-gradient(135deg, rgba(15,15,25,0.95), rgba(20,20,40,0.9))' }}
             >
@@ -98,7 +101,11 @@ export default function RecentlyPlayed() {
                 <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-xs font-bold transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(game.route);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-xs font-bold transition-all cursor-pointer"
                   style={{ background: `linear-gradient(135deg, ${game.accentColor}cc, ${game.accentColor}77)` }}
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />

@@ -204,26 +204,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithPassword = async (email: string, password: string) => {
     if (!configured) {
       // Demo Mode Login
-      const mockId = 'demo-user-1';
+      const isAdmin = email.toLowerCase().includes('admin');
+      const mockId = isAdmin ? 'admin-root' : 'demo-user-1';
       const mockUser = {
         id: mockId,
         email,
         app_metadata: {},
-        user_metadata: { username: email.split('@')[0] },
+        user_metadata: { username: isAdmin ? 'Admin' : email.split('@')[0] },
         aud: 'authenticated',
         created_at: new Date().toISOString(),
       } as unknown as User;
 
       const mockProfile: UserProfile = {
         id: mockId,
-        username: email.split('@')[0],
-        player_id: 'GV-849201',
+        username: isAdmin ? 'Admin' : email.split('@')[0],
+        player_id: isAdmin ? 'GV-ADMIN01' : 'GV-849201',
         avatar_url: 'GV',
-        level: 5,
-        xp: 450,
-        wins: 12,
+        level: isAdmin ? 99 : 5,
+        xp: isAdmin ? 99999 : 450,
+        wins: isAdmin ? 100 : 12,
         losses: 3,
-        total_games: 15,
+        total_games: isAdmin ? 103 : 15,
+        is_admin: isAdmin,
+        role: isAdmin ? 'admin' : 'player',
         created_at: new Date().toISOString(),
       };
 

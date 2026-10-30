@@ -93,7 +93,7 @@ export default function DashboardPage() {
     router.push('/');
   };
 
-  const playableGames = CATALOG_GAMES.slice(0, 3); // Neon Snake, Space Defender, Neon Racer
+  const playableGames = CATALOG_GAMES;
   const favoriteGames = CATALOG_GAMES.filter((g) => favoriteSlugs.includes(g.slug));
 
   return (
@@ -119,6 +119,17 @@ export default function DashboardPage() {
           </Link>
 
           <div className="flex items-center gap-3">
+            {isConfigured ? (
+              <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Supabase Connected</span>
+              </span>
+            ) : (
+              <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold" title="To link your live database, add NEXT_PUBLIC_SUPABASE_URL to Vercel">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span>Demo Mode</span>
+              </span>
+            )}
             <Link
               href="/games"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 text-xs font-bold border border-violet-500/30 transition-colors"
@@ -404,8 +415,16 @@ export default function DashboardPage() {
                     </div>
 
                     <Link
-                      href={`/play/${game.slug}`}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 flex items-center gap-1.5 shadow-lg shadow-violet-600/30 transition-all"
+                      href={
+                        game.slug === 'teen-patti'
+                          ? '/games/teen-patti'
+                          : game.slug === 'ludo'
+                          ? '/games/ludo'
+                          : game.slug === 'tic-tac-toe'
+                          ? '/games/tic-tac-toe'
+                          : `/play/${game.slug}`
+                      }
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 flex items-center gap-1.5 shadow-lg shadow-violet-600/30 transition-all cursor-pointer"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
                       <span>LAUNCH</span>

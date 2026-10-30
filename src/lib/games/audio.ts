@@ -177,6 +177,7 @@ class GameAudioSynthesizer {
   public playLaser() { this.playLaserSound(); }
   public playBoost() { this.playPowerupSound(); }
   public playGameOver() { this.playGameOverSound(); }
+  public playVictory() { this.playPowerupSound(); }
 }
 
 export const gameAudio = new GameAudioSynthesizer();

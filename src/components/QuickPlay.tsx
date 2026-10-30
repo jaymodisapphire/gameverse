@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import {
   Users,
   Bot,
@@ -25,6 +26,7 @@ interface QuickPlayOption {
   glowColor: string;
   steps: { icon: React.ElementType; label: string }[];
   cta: string;
+  route: string;
 }
 
 const OPTIONS: QuickPlayOption[] = [
@@ -42,6 +44,7 @@ const OPTIONS: QuickPlayOption[] = [
       { icon: Hash, label: 'Share room code' },
     ],
     cta: 'Create Room',
+    route: '/games/teen-patti/create',
   },
   {
     id: 'ai',
@@ -57,6 +60,7 @@ const OPTIONS: QuickPlayOption[] = [
       { icon: Zap, label: 'Start instantly' },
     ],
     cta: 'Play AI Match',
+    route: '/games',
   },
   {
     id: 'quick',
@@ -72,10 +76,12 @@ const OPTIONS: QuickPlayOption[] = [
       { icon: Play, label: 'Join live match' },
     ],
     cta: 'Find Match',
+    route: '/games/teen-patti/lobby',
   },
 ];
 
 export default function QuickPlay() {
+  const router = useRouter();
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
@@ -177,7 +183,8 @@ export default function QuickPlay() {
                     <motion.button
                       whileHover={{ scale: 1.03, boxShadow: `0 8px 30px ${opt.glowColor}` }}
                       whileTap={{ scale: 0.97 }}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all"
+                      onClick={() => router.push(opt.route)}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all cursor-pointer"
                       style={{ background: `linear-gradient(135deg, ${opt.accentColor}ee, ${opt.accentColor}99)` }}
                     >
                       {opt.cta}

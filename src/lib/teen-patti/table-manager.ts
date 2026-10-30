@@ -503,3 +503,127 @@ export function triggerShowdown(table: TeenPattiTableState, userId: string): Tee
   saveTableState(updated);
   return updated;
 }
+
+
+/**
+ * Returns the previous active, non-folded player in table order
+ */
+export function getPreviousActivePlayer(
+  table: TeenPattiTableState,
+  currentSeat: number
+): TablePlayer | null {
+  let prevSeat = (currentSeat - 1 + 6) % 6;
+  let count = 0;
+  while (count < 6) {
+    const p = table.players[prevSeat];
+    if (p && p.state !== 'folded') {
+      return p;
+    }
+    prevSeat = (prevSeat - 1 + 6) % 6;
+    count++;
+  }
+  return null;
+}
+
+/**
+ * Request a Side Show (Back Show / Compromise) from the previous active player.
+ */
+export function requestSideShow(table: TeenPattiTableState, userId: string): TeenPattiTableState {
+  const seatIndex = table.players.findIndex((p) => p && p.userId === userId);
+  if (seatIndex === -1 || seatIndex !== table.currentTurnSeat) return table;
+
+  const player = table.players[seatIndex];
+  if (!player || player.state !== 'seen' || !player.cards) return table;
+
+  const prevPlayer = getPreviousActivePlayer(table, seatIndex);
+  if (!prevPlayer || prevPlayer.state !== 'seen' || !prevPlayer.cards) return table;
+
+  const betCost = Math.min(player.chips, table.currentStake * 2);
+
+  const updated: TeenPattiTableState = {
+    ...table,
+    pot: table.pot + betCost,
+    players: [...table.players],
+  };
+
+  updated.players[seatIndex] = {
+    ...player,
+    chips: player.chips - betCost,
+    currentBet: betCost,
+    totalRoundContribution: player.totalRoundContribution + betCost,
+  };
+
+  // Compare hands
+  const cmp = compareHands(player.cards, prevPlayer.cards);
+  const prevSeat = table.players.findIndex((p) => p && p.userId === prevPlayer.userId);
+
+  let loserSeat = seatIndex;
+  let winnerSeat = prevSeat;
+
+  if (cmp >= 0) {
+    loserSeat = prevSeat;
+    winnerSeat = seatIndex;
+  }
+
+  const loserPlayer = updated.players[loserSeat]!;
+  const winnerPlayer = updated.players[winnerSeat]!;
+
+  updated.players[loserSeat] = {
+    ...loserPlayer,
+    state: 'folded',
+  };
+
+  updated.lastAction = {
+    userId,
+    action: 'sideshow',
+    amount: betCost,
+    description: `Side Show! ${winnerPlayer.username} had the better hand. ${loserPlayer.username} packed!`,
+  };
+
+  // Check how many active players remain
+  const activeRemaining = updated.players.filter((p): p is TablePlayer => p !== null && p.state !== 'folded');
+
+  if (activeRemaining.length === 1) {
+    const roundWinner = activeRemaining[0];
+    const rwSeat = updated.players.findIndex((p) => p && p.userId === roundWinner.userId);
+
+    updated.status = 'settled';
+    updated.players[rwSeat] = {
+      ...roundWinner,
+      chips: roundWinner.chips + updated.pot,
+    };
+
+    updated.winnerResult = {
+      winnerUserId: roundWinner.userId,
+      winnerName: roundWinner.username,
+      potAmount: updated.pot,
+      handName: 'Side Show Victor',
+      winningCards: roundWinner.cards,
+    };
+
+    updated.dealer = {
+      ...updated.dealer,
+      message: `Sideshow decided the game! ${roundWinner.username} wins the entire pot of ${updated.pot.toLocaleString()} chips!`,
+      emotion: 'winner',
+    };
+
+    saveTableState(updated);
+    return updated;
+  }
+
+  // Advance turn to next active player
+  let nextSeat = (seatIndex + 1) % 6;
+  while (!updated.players[nextSeat] || updated.players[nextSeat]?.state === 'folded') {
+    nextSeat = (nextSeat + 1) % 6;
+  }
+  updated.currentTurnSeat = nextSeat;
+
+  updated.dealer = {
+    ...updated.dealer,
+    message: `Sideshow complete! ${winnerPlayer.username} prevailed. ${loserPlayer.username} packed! Turn: ${updated.players[nextSeat]?.username}`,
+    emotion: 'turn',
+  };
+
+  saveTableState(updated);
+  return updated;
+}

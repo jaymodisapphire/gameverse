@@ -191,7 +191,15 @@ export default function GamesPortalPage() {
                       ★ {game.rating} • {game.playsCount.toLocaleString()} plays
                     </span>
                     <Link
-                      href={`/play/${game.slug}`}
+                      href={
+                        game.slug === 'teen-patti'
+                          ? '/games/teen-patti'
+                          : game.slug === 'ludo'
+                          ? '/games/ludo'
+                          : game.slug === 'tic-tac-toe'
+                          ? '/games/tic-tac-toe'
+                          : `/play/${game.slug}`
+                      }
                       className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 flex items-center gap-1.5 shadow-lg shadow-violet-600/30 group-hover:translate-x-1 transition-all"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
@@ -280,7 +288,15 @@ export default function GamesPortalPage() {
                     </div>
 
                     <Link
-                      href={`/play/${game.slug}`}
+                      href={
+                        game.slug === 'teen-patti'
+                          ? '/games/teen-patti'
+                          : game.slug === 'ludo'
+                          ? '/games/ludo'
+                          : game.slug === 'tic-tac-toe'
+                          ? '/games/tic-tac-toe'
+                          : `/play/${game.slug}`
+                      }
                       className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-violet-600 font-bold text-xs text-white transition-colors flex items-center gap-1.5"
                     >
                       <Play className="w-3 h-3 fill-current" />

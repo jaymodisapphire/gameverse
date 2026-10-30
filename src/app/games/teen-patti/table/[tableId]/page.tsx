@@ -33,6 +33,8 @@ import {
   placeBet,
   foldPlayer,
   triggerShowdown,
+  requestSideShow,
+  getPreviousActivePlayer,
   saveTableState,
 } from '@/lib/teen-patti/table-manager';
 import { TeenPattiTableState, TablePlayer } from '@/lib/teen-patti/types';
@@ -187,9 +189,22 @@ function TableContent() {
     setTable({ ...updated });
   };
 
+  const handleSideShow = () => {
+    gameAudio.playClick();
+    const updated = requestSideShow(table, currentUserId);
+    setTable({ ...updated });
+  };
+
   const activePlayersCount = table.players.filter(
     (p): p is TablePlayer => p !== null && p.state !== 'folded'
   ).length;
+
+  const prevPlayer = mySeatIndex !== -1 && table ? getPreviousActivePlayer(table, mySeatIndex) : null;
+  const canSideShow =
+    activePlayersCount > 2 &&
+    isMyTurn &&
+    myPlayer?.state === 'seen' &&
+    prevPlayer?.state === 'seen';
 
   return (
     <div className="min-h-screen bg-[#070712] text-white flex flex-col justify-between relative overflow-x-hidden select-none">
@@ -358,15 +373,22 @@ function TableContent() {
 
                       {/* 3 Player Cards */}
                       {p.cards && p.cards.length === 3 && (
-                        <div className="flex items-center -space-x-4 mt-2">
-                          {p.cards.map((c, cIdx) => (
-                            <CardView
-                              key={cIdx}
-                              card={c}
-                              isFaceDown={!isMe && table.status !== 'settled'}
-                              size="sm"
-                            />
-                          ))}
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center -space-x-4 mt-2">
+                            {p.cards.map((c, cIdx) => (
+                              <CardView
+                                key={cIdx}
+                                card={c}
+                                isFaceDown={(p.state === 'blind' || !isMe) && table.status !== 'settled'}
+                                size="sm"
+                              />
+                            ))}
+                          </div>
+                          {isMe && p.state === 'blind' && table.status === 'active' && (
+                            <span className="text-[9px] font-black tracking-widest text-amber-400 uppercase mt-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 animate-pulse">
+                              BLIND (CARDS HIDDEN)
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -500,14 +522,32 @@ function TableContent() {
                   Pack (Fold)
                 </button>
 
-                {/* Showdown (Available when only 2 active players left) */}
+                {/* Showdown / Show (Available when exactly 2 active players left) */}
                 {activePlayersCount === 2 && (
                   <button
                     onClick={handleShowdown}
-                    disabled={!isMyTurn}
-                    className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-cyan-600/30 cursor-pointer disabled:opacity-40"
+                    disabled={!isMyTurn || (myPlayer?.chips || 0) < limits.minBet}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/40 border border-cyan-400/50 cursor-pointer disabled:opacity-40 animate-pulse flex items-center gap-1.5"
                   >
-                    Show ({limits.minBet.toLocaleString()})
+                    <span>SHOW ({limits.minBet.toLocaleString()})</span>
+                  </button>
+                )}
+
+                {/* Side Show (Available when more than 2 active players left) */}
+                {activePlayersCount > 2 && (
+                  <button
+                    onClick={handleSideShow}
+                    disabled={!canSideShow || (myPlayer?.chips || 0) < limits.minBet}
+                    title={
+                      myPlayer?.state !== 'seen'
+                        ? 'You must See Cards first to request a Side Show'
+                        : prevPlayer?.state !== 'seen'
+                        ? `${prevPlayer?.username || 'Previous player'} is playing Blind (cannot request Side Show)`
+                        : `Request Side Show against ${prevPlayer?.username}`
+                    }
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-purple-600/30 border border-purple-400/40 cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
+                  >
+                    <span>SIDE SHOW ({limits.minBet.toLocaleString()})</span>
                   </button>
                 )}
 

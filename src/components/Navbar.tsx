@@ -40,7 +40,7 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const router = useRouter();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isConfigured } = useAuth();
 
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -248,6 +248,11 @@ export default function Navbar() {
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-mono font-bold">
                     Lv.{playerLevel}
                   </span>
+                  {isConfigured ? (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Connected to Supabase Cloud" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-amber-400" title="Demo Mode (Local Storage)" />
+                  )}
                   <ChevronDown className={`w-3.5 h-3.5 text-white/40 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
                 </motion.button>
                 <AnimatePresence>
@@ -261,6 +266,20 @@ export default function Navbar() {
                       <div className="px-4 py-3 border-b border-white/5">
                         <p className="text-white font-bold text-sm truncate">{displayName}</p>
                         <p className="text-violet-400 text-xs font-mono">{profile?.player_id || 'GV-849201'}</p>
+                      </div>
+
+                      {/* Database Status Badge */}
+                      <div className="px-4 py-2 bg-white/3 border-b border-white/5 flex items-center justify-between text-[11px]">
+                        <span className="text-white/40">Database:</span>
+                        {isConfigured ? (
+                          <span className="text-emerald-400 font-bold flex items-center gap-1 font-mono">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Supabase Live
+                          </span>
+                        ) : (
+                          <span className="text-amber-300 font-bold flex items-center gap-1 font-mono" title="Connect Supabase credentials in Vercel settings">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Demo Mode
+                          </span>
+                        )}
                       </div>
 
                       <Link
@@ -348,6 +367,15 @@ export default function Navbar() {
               </motion.div>
             ) : (
               <div className="flex items-center gap-2">
+                {isConfigured ? (
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live DB
+                  </span>
+                ) : (
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[10px] font-mono" title="Running in Demo Mode. Connect Supabase in Vercel to link real database.">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Demo Mode
+                  </span>
+                )}
                 <Link
                   href="/auth/login"
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-bold border border-white/10 transition-all"

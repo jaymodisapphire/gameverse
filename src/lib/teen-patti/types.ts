@@ -63,7 +63,7 @@ export interface TeenPattiTableState {
   dealer: DealerState;
   lastAction?: {
     userId: string;
-    action: 'boot' | 'blind' | 'chaal' | 'raise' | 'pack' | 'show';
+    action: 'boot' | 'blind' | 'chaal' | 'raise' | 'pack' | 'show' | 'sideshow';
     amount?: number;
     description: string;
   };
