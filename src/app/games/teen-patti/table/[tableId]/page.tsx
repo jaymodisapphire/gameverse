@@ -235,16 +235,16 @@ function TableContent() {
 
   const getHandBadge = (cards: Card[]) => {
     const evalResult = evaluateHand(cards);
-    switch (evalResult.rank) {
-      case 'trail':
+    switch (evalResult.tier) {
+      case 'Trail':
         return { label: '👑 TRAIL (TRIO)', bg: 'bg-gradient-to-r from-red-600 via-amber-500 to-yellow-400 text-white shadow-amber-500/50' };
-      case 'pure_sequence':
+      case 'Pure Sequence':
         return { label: '💎 PURE RUN', bg: 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-emerald-500/50' };
-      case 'sequence':
+      case 'Sequence':
         return { label: '⚡ RUN', bg: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-purple-500/50' };
-      case 'color':
+      case 'Color':
         return { label: '🎨 COLOR', bg: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-blue-500/50' };
-      case 'pair':
+      case 'Pair':
         return { label: '👥 PAIR', bg: 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-orange-500/50' };
       default:
         return { label: '🃏 HIGH CARD', bg: 'bg-gradient-to-r from-slate-700 to-slate-600 text-slate-200 shadow-slate-500/20' };
