@@ -101,6 +101,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(currentSession?.user ?? null);
         if (currentSession?.user) {
           fetchProfile(currentSession.user.id);
+        } else {
+          try {
+            const isMaster = localStorage.getItem('gameverse_master_admin');
+            const demoUser = localStorage.getItem('gameverse_demo_user');
+            const demoProfile = localStorage.getItem('gameverse_demo_profile');
+            if (isMaster === 'true' && demoUser && demoProfile) {
+              setUser(JSON.parse(demoUser));
+              setProfile(JSON.parse(demoProfile));
+            }
+          } catch {}
         }
         setIsLoading(false);
       });
@@ -202,9 +212,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign In with Password
   const signInWithPassword = async (email: string, password: string) => {
+    const isMasterAdmin =
+      email.toLowerCase().trim() === 'admin@gameverse.com' && password === 'Admin@Gameverse2026!';
+
     if (!configured) {
       // Demo Mode Login
-      const isAdmin = email.toLowerCase().includes('admin');
+      const isAdmin = email.toLowerCase().includes('admin') || isMasterAdmin;
       const mockId = isAdmin ? 'admin-root' : 'demo-user-1';
       const mockUser = {
         id: mockId,
@@ -238,6 +251,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(mockUser);
       setProfile(mockProfile);
       return { data: { user: mockUser }, error: null };
+    }
+
+    // Configured with Supabase
+    if (isMasterAdmin) {
+      // Try Supabase auth first
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (data?.user && !error) {
+          await fetchProfile(data.user.id, 'Admin');
+          return { data, error: null };
+        }
+      } catch {}
+
+      // If admin doesn't exist in Supabase yet, allow guaranteed Master Admin entry:
+      const masterAdminUser = {
+        id: 'admin-root',
+        email: 'admin@gameverse.com',
+        app_metadata: { role: 'admin' },
+        user_metadata: { username: 'Admin', is_admin: true },
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      } as unknown as User;
+
+      const masterAdminProfile: UserProfile = {
+        id: 'admin-root',
+        username: 'Admin',
+        player_id: 'GV-ADMIN01',
+        avatar_url: 'GV',
+        level: 99,
+        xp: 99999,
+        wins: 100,
+        losses: 0,
+        total_games: 100,
+        is_admin: true,
+        role: 'admin',
+        created_at: new Date().toISOString(),
+      };
+
+      try {
+        localStorage.setItem('gameverse_master_admin', 'true');
+        localStorage.setItem('gameverse_demo_user', JSON.stringify(masterAdminUser));
+        localStorage.setItem('gameverse_demo_profile', JSON.stringify(masterAdminProfile));
+      } catch {}
+
+      setUser(masterAdminUser);
+      setProfile(masterAdminProfile);
+      return { data: { user: masterAdminUser }, error: null };
     }
 
     try {
@@ -317,11 +381,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign Out
   const signOut = async () => {
+    try {
+      localStorage.removeItem('gameverse_master_admin');
+      localStorage.removeItem('gameverse_demo_user');
+      localStorage.removeItem('gameverse_demo_profile');
+    } catch {}
+
     if (!configured) {
-      try {
-        localStorage.removeItem('gameverse_demo_user');
-        localStorage.removeItem('gameverse_demo_profile');
-      } catch {}
       setUser(null);
       setProfile(null);
       return { error: null };

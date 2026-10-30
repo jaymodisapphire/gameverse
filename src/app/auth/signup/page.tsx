@@ -125,7 +125,11 @@ export default function SignUpPage() {
     try {
       const { error } = await signInWithOAuth('google');
       if (error) {
-        setErrorMessage(error);
+        if (error.includes('provider is not enabled') || error.includes('Unsupported provider')) {
+          setErrorMessage('Google OAuth is not enabled in your Supabase project yet. Please enable Google in Supabase Dashboard > Authentication > Providers, or register with Email & Password below.');
+        } else {
+          setErrorMessage(error);
+        }
         setIsOAuthSubmitting(false);
       } else if (demoMode) {
         setSuccessMessage('Registered with Google Account!');

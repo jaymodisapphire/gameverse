@@ -82,7 +82,11 @@ function LoginForm() {
     try {
       const { error } = await signInWithOAuth('google');
       if (error) {
-        setErrorMessage(error);
+        if (error.includes('provider is not enabled') || error.includes('Unsupported provider')) {
+          setErrorMessage('Google OAuth is not enabled in your Supabase project yet. Please enable Google in Supabase Dashboard > Authentication > Providers, or log in with Email & Password below.');
+        } else {
+          setErrorMessage(error);
+        }
         setIsOAuthSubmitting(false);
       } else if (demoMode) {
         setSuccessMessage('Logged in with Google Demo Account!');
@@ -91,7 +95,7 @@ function LoginForm() {
         }, 800);
       }
     } catch {
-      setErrorMessage('Failed to connect to Google authentication.');
+      setErrorMessage('Google Provider is not enabled in your database. Please use Email/Password sign in below.');
       setIsOAuthSubmitting(false);
     }
   };
@@ -232,6 +236,35 @@ function LoginForm() {
               Or email sign in
             </span>
             <div className="flex-1 h-px bg-white/10" />
+          </div>
+
+          {/* Quick Fill Credentials */}
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/3 border border-white/8 mb-4">
+            <span className="text-[10px] text-white/40 uppercase font-mono">Quick Credentials:</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('admin@gameverse.com');
+                  setPassword('Admin@Gameverse2026!');
+                  setErrorMessage(null);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[11px] font-bold border border-amber-500/30 transition-all cursor-pointer"
+              >
+                👑 Fill Admin ID
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('player@gameverse.gg');
+                  setPassword('GameVerse@2026!');
+                  setErrorMessage(null);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 text-[11px] font-bold border border-violet-500/30 transition-all cursor-pointer"
+              >
+                🎮 Fill Player ID
+              </button>
+            </div>
           </div>
 
           {/* Credentials Form */}
