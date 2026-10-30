@@ -36,15 +36,18 @@ export default function AdminChipRequestsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const loadRequests = async () => {
-    setIsLoading(true);
+  const loadRequests = async (showSpinner = false) => {
+    if (showSpinner) setIsLoading(true);
     const list = await adminGetPendingRequests();
     setRequests(list);
-    setIsLoading(false);
+    if (showSpinner) setIsLoading(false);
   };
 
   useEffect(() => {
-    loadRequests();
+    loadRequests(true);
+    // Real-time auto-refresh polling every 3 seconds for live requests
+    const interval = setInterval(() => loadRequests(false), 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCommitReview = async () => {

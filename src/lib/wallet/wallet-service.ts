@@ -456,6 +456,19 @@ export async function adminGrantChips(
  * ADMIN: Gets all pending chip requests for review.
  */
 export async function adminGetPendingRequests(): Promise<ChipRequest[]> {
+  // 1. Try server-side API (bypasses RLS, joins profiles reliably)
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/chip-requests', { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.requests) && json.requests.length > 0) {
+          return json.requests;
+        }
+      }
+    } catch {}
+  }
+
   if (!isSupabaseConfigured()) {
     try {
       const raw = typeof window !== 'undefined' ? localStorage.getItem(DEMO_REQ_KEY) : null;
@@ -468,17 +481,37 @@ export async function adminGetPendingRequests(): Promise<ChipRequest[]> {
 
   const supabase = createClient();
   try {
-    const { data, error } = await supabase
+    // Query chip_requests directly without broken foreign key join
+    const { data: requests, error } = await supabase
       .from('chip_requests')
-      .select('*, profiles:requester_user_id(username, player_id)')
+      .select('*')
       .order('created_at', { ascending: false });
 
-    if (error || !data) return [];
+    if (error || !requests) {
+      // Fallback to local storage if present
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(DEMO_REQ_KEY) : null;
+      return raw ? JSON.parse(raw) : [];
+    }
 
-    return data.map((r: any) => ({
+    // Fetch matching profiles
+    const userIds = Array.from(new Set(requests.map((r: any) => r.requester_user_id)));
+    const profileMap = new Map<string, { username: string; player_id: string }>();
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, player_id')
+        .in('id', userIds);
+
+      if (profiles) {
+        profiles.forEach((p: any) => profileMap.set(p.id, p));
+      }
+    }
+
+    const mapped = requests.map((r: any) => ({
       id: r.id,
       requesterUserId: r.requester_user_id,
-      requesterUsername: r.profiles?.username || 'Player',
+      requesterUsername: profileMap.get(r.requester_user_id)?.username || 'Player',
       requestedAmount: Number(r.requested_amount),
       status: r.status,
       requestMessage: r.request_message,
@@ -488,8 +521,11 @@ export async function adminGetPendingRequests(): Promise<ChipRequest[]> {
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }));
+
+    return mapped;
   } catch {
-    return [];
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(DEMO_REQ_KEY) : null;
+    return raw ? JSON.parse(raw) : [];
   }
 }
 
@@ -503,6 +539,28 @@ export async function adminReviewRequest(
   action: 'approve' | 'reject',
   responseText: string = ''
 ): Promise<{ success: boolean; newBalance?: number; error?: string }> {
+  // 1. Try server API review endpoint
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/review-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId,
+          action,
+          responseText: responseText.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          return { success: true, newBalance: json.new_balance };
+        }
+      }
+    } catch {}
+  }
+
   if (!isSupabaseConfigured()) {
     try {
       const raw = typeof window !== 'undefined' ? localStorage.getItem(DEMO_REQ_KEY) : null;

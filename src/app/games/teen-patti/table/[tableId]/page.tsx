@@ -20,6 +20,11 @@ import {
   Flame,
   Smile,
   Sparkles,
+  Coins,
+  Send,
+  X,
+  PlusCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
 import {
@@ -33,13 +38,14 @@ import {
   triggerShowdown,
   requestSideShow,
   getPreviousActivePlayer,
+  saveTableState,
 } from '@/lib/teen-patti/table-manager';
 import { TeenPattiTableState, TablePlayer, Card } from '@/lib/teen-patti/types';
 import { DealerAvatar } from '@/components/teen-patti/DealerAvatar';
 import { CardView } from '@/components/teen-patti/CardView';
 import { ChipStack3D } from '@/components/teen-patti/ChipStack3D';
 import { getBettingLimits, evaluateHand } from '@/lib/teen-patti/engine';
-import { getPlayerWallet } from '@/lib/wallet/wallet-service';
+import { getPlayerWallet, submitChipRequest } from '@/lib/wallet/wallet-service';
 import { gameAudio } from '@/lib/games/audio';
 
 interface FloatingEmote {
@@ -48,6 +54,8 @@ interface FloatingEmote {
   x: number;
   y: number;
 }
+
+const CHIP_PRESETS = [10000, 25000, 50000, 100000, 250000];
 
 function TableContent() {
   const params = useParams();
@@ -61,6 +69,16 @@ function TableContent() {
   const [raiseAmount, setRaiseAmount] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [emotes, setEmotes] = useState<FloatingEmote[]>([]);
+
+  // In-Game Chip Request Modal State
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestAmount, setRequestAmount] = useState<number>(50000);
+  const [requestMessage, setRequestMessage] = useState('Need chips for Teen Patti');
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [requestStatusMsg, setRequestStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Instant Approval Banner State
+  const [approvedNotice, setApprovedNotice] = useState<string | null>(null);
 
   const currentUserId = user?.id || 'demo-player';
   const currentUsername = profile?.username || 'Player';
@@ -81,6 +99,48 @@ function TableContent() {
   const mySeatIndex = table?.players.findIndex((p) => p && p.userId === currentUserId) ?? -1;
   const myPlayer = mySeatIndex !== -1 && table ? table.players[mySeatIndex] : null;
   const isMyTurn = table?.status === 'active' && table?.currentTurnSeat === mySeatIndex;
+
+  // Real-Time Instant Auto-Credit Sync (Every 1.5 seconds)
+  // When Admin approves request, wallet balance increases -> instantly adds chips to table & continues game!
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const w = await getPlayerWallet(currentUserId);
+        setUserChips((prev) => {
+          if (w.balance > prev) {
+            const diff = w.balance - prev;
+            gameAudio.playBoost();
+
+            // Seamlessly credit chips directly to player's in-game seat stack!
+            setTable((currentTable) => {
+              if (!currentTable) return currentTable;
+              const seatIdx = currentTable.players.findIndex((p) => p && p.userId === currentUserId);
+              if (seatIdx !== -1 && currentTable.players[seatIdx]) {
+                const updated = {
+                  ...currentTable,
+                  players: currentTable.players.map((p, i) =>
+                    i === seatIdx && p ? { ...p, chips: p.chips + diff } : p
+                  ),
+                };
+                saveTableState(updated);
+                return updated;
+              }
+              return currentTable;
+            });
+
+            // Show celebratory banner
+            setApprovedNotice(`🎉 Admin approved your request! +${diff.toLocaleString()} chips added to your table!`);
+            setTimeout(() => setApprovedNotice(null), 6000);
+          }
+          return w.balance;
+        });
+      } catch {}
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [currentUserId]);
 
   // Betting limits for current turn
   const isSeen = myPlayer?.state === 'seen';
@@ -198,6 +258,38 @@ function TableContent() {
     setTable({ ...updated });
   };
 
+  // Submit in-game chip request without leaving table!
+  const handleSubmitInGameRequest = async () => {
+    if (requestAmount <= 0) return;
+    setIsSubmittingRequest(true);
+    setRequestStatusMsg(null);
+
+    const res = await submitChipRequest(
+      currentUserId,
+      currentUsername,
+      requestAmount,
+      requestMessage
+    );
+
+    setIsSubmittingRequest(false);
+
+    if (res.success) {
+      setRequestStatusMsg({
+        type: 'success',
+        text: `Request for ${requestAmount.toLocaleString()} chips sent to Admin! Waiting for approval...`,
+      });
+      setTimeout(() => {
+        setShowRequestModal(false);
+        setRequestStatusMsg(null);
+      }, 2500);
+    } else {
+      setRequestStatusMsg({
+        type: 'error',
+        text: res.error || 'Failed to submit request. Please try again.',
+      });
+    }
+  };
+
   const triggerEmote = (emoji: string) => {
     gameAudio.playClick();
     const newEmote: FloatingEmote = {
@@ -275,6 +367,21 @@ function TableContent() {
         ))}
       </AnimatePresence>
 
+      {/* Top Real-Time Approval Toast Notice */}
+      <AnimatePresence>
+        {approvedNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -40, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30 }}
+            className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black font-black text-sm shadow-2xl shadow-amber-500/60 border-2 border-white flex items-center gap-2.5 animate-pulse"
+          >
+            <Sparkles className="w-5 h-5 text-black" />
+            <span>{approvedNotice}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top Header Bar */}
       <header className="sticky top-0 z-40 backdrop-blur-2xl bg-black/80 border-b border-amber-500/20 px-3 sm:px-6 py-2.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -304,6 +411,16 @@ function TableContent() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Quick In-Game Request Chips Button */}
+            <button
+              onClick={() => setShowRequestModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/25 to-yellow-500/25 hover:from-amber-500/40 hover:to-yellow-500/40 text-amber-300 border border-amber-400/50 text-xs font-black shadow-md shadow-amber-500/20 transition-all hover:scale-105 cursor-pointer"
+              title="Request chips from admin while playing"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Request Chips</span>
+            </button>
+
             {/* Quick Emote Reactions */}
             <div className="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
               {['🔥', '🪙', '😎', '👑', '🚀'].map((emoji) => (
@@ -329,13 +446,10 @@ function TableContent() {
             </button>
 
             {/* User Chip Count */}
-            <Link
-              href="/wallet"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 hover:bg-black/90 border border-amber-400/40 text-xs font-mono font-black text-amber-400 shadow-md shadow-amber-500/20"
-            >
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 border border-amber-400/40 text-xs font-mono font-black text-amber-400 shadow-md shadow-amber-500/20">
               <span>🪙</span>
               <span>{userChips.toLocaleString()}</span>
-            </Link>
+            </div>
 
             {/* Fullscreen Button */}
             <button
@@ -608,6 +722,129 @@ function TableContent() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ============================================================== */}
+        {/* IN-GAME CHIP REQUEST MODAL                                     */}
+        {/* ============================================================== */}
+        <AnimatePresence>
+          {showRequestModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="max-w-md w-full bg-gradient-to-br from-[#121324] to-[#0c0d18] border-2 border-amber-400/50 rounded-3xl p-6 shadow-2xl relative"
+                style={{
+                  boxShadow: '0 25px 60px -15px rgba(0,0,0,0.9), 0 0 40px rgba(245,158,11,0.3)',
+                }}
+              >
+                {/* Close Button */}
+                <button
+                  onClick={() => setShowRequestModal(false)}
+                  className="absolute top-4 right-4 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300">
+                    <Coins className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-black text-white">REQUEST VIRTUAL CHIPS</h2>
+                    <span className="text-[10px] text-amber-400 font-mono">
+                      Current balance: {userChips.toLocaleString()} chips
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-white/60 mb-4">
+                  Request chips directly from admin. Once approved, they will credit into your active game automatically!
+                </p>
+
+                {/* Status Message */}
+                {requestStatusMsg && (
+                  <div
+                    className={`p-3 rounded-xl mb-4 text-xs font-bold flex items-center gap-2 ${
+                      requestStatusMsg.type === 'success'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                    }`}
+                  >
+                    {requestStatusMsg.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    ) : null}
+                    <span>{requestStatusMsg.text}</span>
+                  </div>
+                )}
+
+                {/* Amount Presets */}
+                <span className="text-[11px] font-bold text-white/80 block mb-2">Select Amount:</span>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {CHIP_PRESETS.map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setRequestAmount(amt)}
+                      className={`py-2 px-1 rounded-xl text-xs font-mono font-black border transition-all cursor-pointer ${
+                        requestAmount === amt
+                          ? 'bg-amber-500 text-black border-amber-300 shadow-md shadow-amber-500/40 scale-105'
+                          : 'bg-white/5 hover:bg-white/10 text-white/80 border-white/10'
+                      }`}
+                    >
+                      {amt.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Reason input */}
+                <div className="mb-4">
+                  <label className="text-[11px] font-bold text-white/80 block mb-1">
+                    Note for Admin:
+                  </label>
+                  <input
+                    type="text"
+                    value={requestMessage}
+                    onChange={(e) => setRequestMessage(e.target.value)}
+                    placeholder="e.g. In the middle of Teen Patti match"
+                    className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/15 text-xs text-white placeholder-white/40 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowRequestModal(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold border border-white/10 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSubmittingRequest}
+                    onClick={handleSubmitInGameRequest}
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black text-xs font-black uppercase tracking-wider shadow-lg shadow-amber-500/40 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingRequest ? (
+                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Send Request</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* ============================================================== */}
@@ -621,13 +858,22 @@ function TableContent() {
               <span className="text-white/70">
                 You are currently spectating. Click any open seat on the table to join the game!
               </span>
-              <button
-                onClick={handleAddBot}
-                className="px-4 py-2.5 rounded-xl bg-violet-600/30 hover:bg-violet-600/50 text-violet-300 border border-violet-500/40 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-              >
-                <Bot className="w-4 h-4" />
-                <span>Add AI Bot</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowRequestModal(true)}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Coins className="w-3.5 h-3.5" />
+                  <span>Request Chips</span>
+                </button>
+                <button
+                  onClick={handleAddBot}
+                  className="px-4 py-2 rounded-xl bg-violet-600/30 hover:bg-violet-600/50 text-violet-300 border border-violet-500/40 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Bot className="w-4 h-4" />
+                  <span>Add AI Bot</span>
+                </button>
+              </div>
             </div>
           ) : table.status !== 'active' ? (
             /* Round Waiting Stage */
@@ -636,6 +882,13 @@ function TableContent() {
                 Round finished. Seated: {table.players.filter((p) => p !== null).length}/6 players
               </span>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowRequestModal(true)}
+                  className="px-3.5 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Coins className="w-3.5 h-3.5" />
+                  <span>Request Chips</span>
+                </button>
                 <button
                   onClick={handleAddBot}
                   className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
@@ -654,7 +907,7 @@ function TableContent() {
           ) : (
             /* Active Live Hand Controls */
             <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3">
-              {/* Left Side: See Cards Button */}
+              {/* Left Side: See Cards Button or Request Chips */}
               <div className="flex items-center gap-2">
                 {myPlayer?.state === 'blind' ? (
                   <button
@@ -671,6 +924,17 @@ function TableContent() {
                       <span className="text-amber-400">{evaluateHand(myPlayer.cards).name}</span>
                     </div>
                   )
+                )}
+
+                {/* Quick Request Chips Button if player's chips are low */}
+                {(myPlayer?.chips || 0) < limits.minBet && (
+                  <button
+                    onClick={() => setShowRequestModal(true)}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 text-xs font-black animate-pulse flex items-center gap-1"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>Get Chips</span>
+                  </button>
                 )}
               </div>
 
