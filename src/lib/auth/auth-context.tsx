@@ -297,6 +297,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('gameverse_master_admin', 'true');
         localStorage.setItem('gameverse_demo_user', JSON.stringify(masterAdminUser));
         localStorage.setItem('gameverse_demo_profile', JSON.stringify(masterAdminProfile));
+        if (typeof document !== 'undefined') {
+          document.cookie = 'gameverse_admin_session=true; path=/; max-age=604800; SameSite=Lax';
+        }
       } catch {}
 
       setUser(masterAdminUser);
@@ -385,6 +388,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('gameverse_master_admin');
       localStorage.removeItem('gameverse_demo_user');
       localStorage.removeItem('gameverse_demo_profile');
+      if (typeof document !== 'undefined') {
+        document.cookie = 'gameverse_admin_session=; path=/; max-age=0; SameSite=Lax';
+      }
     } catch {}
 
     if (!configured) {

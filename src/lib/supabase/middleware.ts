@@ -75,20 +75,23 @@ export async function updateSession(request: NextRequest) {
   // Protected routes: user must be logged in
   const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/profile');
 
+  // Master Admin Cookie Bypass (ensures guaranteed admin access)
+  const isMasterAdminCookie = request.cookies.get('gameverse_admin_session')?.value === 'true';
+
   // Auth routes: authenticated users should be redirected to dashboard
   const isAuthRoute =
     pathname === '/auth/login' ||
     pathname === '/auth/signup' ||
     pathname === '/auth/forgot-password';
 
-  if (isProtectedRoute && !user) {
+  if (isProtectedRoute && !user && !isMasterAdminCookie) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/auth/login';
     redirectUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (isAuthRoute && user) {
+  if (isAuthRoute && (user || isMasterAdminCookie)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/dashboard';
     return NextResponse.redirect(redirectUrl);
