@@ -118,7 +118,7 @@ export default function AdminChipRequestsPage() {
           </div>
 
           <button
-            onClick={loadRequests}
+            onClick={() => loadRequests(true)}
             className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-xs font-bold transition-all cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
