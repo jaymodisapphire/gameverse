@@ -20,24 +20,49 @@ export async function getPlayerWallet(userId: string): Promise<PlayerWallet> {
     return getDemoWallet(userId);
   }
 
+  // Fast read from local cache if present
+  let cachedWallet: PlayerWallet | null = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('gameverse_wallet_cache_' + userId);
+      if (cached) cachedWallet = JSON.parse(cached);
+    } catch {}
+  }
+
   const supabase = createClient();
 
   try {
-    // 1. Try to fetch existing wallet
-    const { data, error } = await supabase
+    // 1. Try to fetch existing wallet with 1500ms safety timeout
+    const fetchPromise = supabase
       .from('player_wallets')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
 
+    const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+      setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 1500)
+    );
+
+    const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
     if (data && !error) {
-      return {
+      const wallet: PlayerWallet = {
         id: data.id,
         userId: data.user_id,
         balance: Number(data.balance),
         createdAt: data.created_at,
         updatedAt: data.updated_at,
       };
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('gameverse_wallet_cache_' + userId, JSON.stringify(wallet));
+        } catch {}
+      }
+      return wallet;
+    }
+
+    if (cachedWallet) {
+      return cachedWallet;
     }
 
     // 2. If no wallet or initial load, invoke grant_starting_chips RPC
@@ -46,19 +71,25 @@ export async function getPlayerWallet(userId: string): Promise<PlayerWallet> {
     });
 
     if (grantData && !grantError) {
-      return {
+      const wallet: PlayerWallet = {
         userId,
         balance: Number(grantData.balance),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('gameverse_wallet_cache_' + userId, JSON.stringify(wallet));
+        } catch {}
+      }
+      return wallet;
     }
 
     // Fallback if RPC call failed
     return getDemoWallet(userId);
   } catch (err) {
     console.error('Failed to get player wallet from Supabase:', err);
-    return getDemoWallet(userId);
+    return cachedWallet || getDemoWallet(userId);
   }
 }
 

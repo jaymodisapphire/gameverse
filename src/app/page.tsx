@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import LoadingScreen from '@/components/LoadingScreen';
+import { motion } from 'framer-motion';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
@@ -15,56 +13,46 @@ import RecentlyPlayed from '@/components/RecentlyPlayed';
 import Footer from '@/components/Footer';
 
 export default function Home() {
-  const [loading, setLoading] = useState(true);
-
   return (
-    <>
-      <AnimatePresence>
-        {loading && <LoadingScreen onComplete={() => setLoading(false)} />}
-      </AnimatePresence>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="relative min-h-screen bg-black overflow-x-hidden"
+    >
+      <AnimatedBackground />
+      <Navbar />
 
-      {!loading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="relative min-h-screen bg-black overflow-x-hidden"
-        >
-          <AnimatedBackground />
-          <Navbar />
+      <main>
+        <HeroSection />
 
-          <main>
-            <HeroSection />
+        {/* Divider */}
+        <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-            {/* Divider */}
-            <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        <GamingStatistics />
 
-            <GamingStatistics />
+        <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-            <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        <FeaturedGames />
 
-            <FeaturedGames />
+        <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-            <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        <QuickPlay />
 
-            <QuickPlay />
+        <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-            <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        <OnlineFriends />
 
-            <OnlineFriends />
+        <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-            <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        <LeaderboardPreview />
 
-            <LeaderboardPreview />
+        <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-            <div className="h-px mx-8 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        <RecentlyPlayed />
+      </main>
 
-            <RecentlyPlayed />
-          </main>
-
-          <Footer />
-        </motion.div>
-      )}
-    </>
+      <Footer />
+    </motion.div>
   );
 }

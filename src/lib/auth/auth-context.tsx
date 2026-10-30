@@ -95,25 +95,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setConfigured(isConfig);
 
     if (isConfig) {
-      // Supabase is configured: restore real session
-      supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        if (currentSession?.user) {
-          fetchProfile(currentSession.user.id);
-        } else {
-          try {
-            const isMaster = localStorage.getItem('gameverse_master_admin');
-            const demoUser = localStorage.getItem('gameverse_demo_user');
-            const demoProfile = localStorage.getItem('gameverse_demo_profile');
-            if (isMaster === 'true' && demoUser && demoProfile) {
-              setUser(JSON.parse(demoUser));
-              setProfile(JSON.parse(demoProfile));
-            }
-          } catch {}
+      // Restore cached admin/user immediately to avoid loading flash
+      try {
+        const isMaster = localStorage.getItem('gameverse_master_admin');
+        const demoUser = localStorage.getItem('gameverse_demo_user');
+        const demoProfile = localStorage.getItem('gameverse_demo_profile');
+        if (isMaster === 'true' && demoUser && demoProfile) {
+          setUser(JSON.parse(demoUser));
+          setProfile(JSON.parse(demoProfile));
         }
-        setIsLoading(false);
-      });
+      } catch {}
+
+      // Fast timeout safeguard (1500ms max) so UI never hangs on slow network
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+        setTimeout(() => resolve({ data: { session: null } }), 1500)
+      );
+
+      Promise.race([sessionPromise, timeoutPromise])
+        .then(({ data: { session: currentSession } }) => {
+          if (currentSession) {
+            setSession(currentSession);
+            setUser(currentSession.user);
+            fetchProfile(currentSession.user.id);
+          } else {
+            try {
+              const isMaster = localStorage.getItem('gameverse_master_admin');
+              const demoUser = localStorage.getItem('gameverse_demo_user');
+              const demoProfile = localStorage.getItem('gameverse_demo_profile');
+              if (isMaster === 'true' && demoUser && demoProfile) {
+                setUser(JSON.parse(demoUser));
+                setProfile(JSON.parse(demoProfile));
+              }
+            } catch {}
+          }
+          setIsLoading(false);
+        })
+        .catch(() => {
+          setIsLoading(false);
+        });
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (_event, newSession) => {

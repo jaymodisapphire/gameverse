@@ -6,22 +6,20 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
-  Coins,
   Users,
   Copy,
   Check,
-  Play,
-  RotateCcw,
-  Sparkles,
   Trophy,
   Bot,
   Eye,
-  HandMetal,
-  XCircle,
-  HelpCircle,
+  ShieldCheck,
+  Maximize2,
+  Minimize2,
   Volume2,
   VolumeX,
-  ShieldCheck,
+  Flame,
+  Smile,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
 import {
@@ -35,14 +33,21 @@ import {
   triggerShowdown,
   requestSideShow,
   getPreviousActivePlayer,
-  saveTableState,
 } from '@/lib/teen-patti/table-manager';
-import { TeenPattiTableState, TablePlayer } from '@/lib/teen-patti/types';
+import { TeenPattiTableState, TablePlayer, Card } from '@/lib/teen-patti/types';
 import { DealerAvatar } from '@/components/teen-patti/DealerAvatar';
 import { CardView } from '@/components/teen-patti/CardView';
+import { ChipStack3D } from '@/components/teen-patti/ChipStack3D';
 import { getBettingLimits, evaluateHand } from '@/lib/teen-patti/engine';
 import { getPlayerWallet } from '@/lib/wallet/wallet-service';
 import { gameAudio } from '@/lib/games/audio';
+
+interface FloatingEmote {
+  id: number;
+  emoji: string;
+  x: number;
+  y: number;
+}
 
 function TableContent() {
   const params = useParams();
@@ -54,11 +59,13 @@ function TableContent() {
   const [copied, setCopied] = useState(false);
   const [userChips, setUserChips] = useState(100000);
   const [raiseAmount, setRaiseAmount] = useState<number>(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [emotes, setEmotes] = useState<FloatingEmote[]>([]);
 
   const currentUserId = user?.id || 'demo-player';
   const currentUsername = profile?.username || 'Player';
   const currentPlayerId = profile?.player_id || 'GV-849201';
-  const currentAvatar = profile?.avatar_url || 'GV';
+  const currentAvatar = profile?.avatar_url || '👑';
 
   // Load Table State & User Chips
   useEffect(() => {
@@ -95,23 +102,19 @@ function TableContent() {
 
     if (activePlayer && activePlayer.isAI && activePlayer.state !== 'folded') {
       const timer = setTimeout(() => {
-        // AI Decision Logic
         const remainingActive = table.players.filter(
           (p): p is TablePlayer => p !== null && p.state !== 'folded'
         );
 
         if (remainingActive.length === 2 && Math.random() < 0.35) {
-          // AI triggers Showdown
           gameAudio.playClick();
           const updated = triggerShowdown(table, activePlayer.userId);
           setTable({ ...updated });
         } else if (Math.random() < 0.15 && activePlayer.state === 'seen') {
-          // AI folds on weak chance
           gameAudio.playGameOver();
           const updated = foldPlayer(table, activePlayer.userId);
           setTable({ ...updated });
         } else {
-          // AI plays Chaal / Blind
           gameAudio.playEat();
           const aiLimits = getBettingLimits(table.currentStake, activePlayer.state === 'seen');
           const updated = placeBet(table, activePlayer.userId, aiLimits.minBet);
@@ -126,7 +129,7 @@ function TableContent() {
   if (!table) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -195,6 +198,30 @@ function TableContent() {
     setTable({ ...updated });
   };
 
+  const triggerEmote = (emoji: string) => {
+    gameAudio.playClick();
+    const newEmote: FloatingEmote = {
+      id: Date.now(),
+      emoji,
+      x: 35 + Math.random() * 30,
+      y: 60 + Math.random() * 20,
+    };
+    setEmotes((prev) => [...prev.slice(-6), newEmote]);
+    setTimeout(() => {
+      setEmotes((prev) => prev.filter((e) => e.id !== newEmote.id));
+    }, 2000);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
   const activePlayersCount = table.players.filter(
     (p): p is TablePlayer => p !== null && p.state !== 'folded'
   ).length;
@@ -206,25 +233,67 @@ function TableContent() {
     myPlayer?.state === 'seen' &&
     prevPlayer?.state === 'seen';
 
-  return (
-    <div className="min-h-screen bg-[#070712] text-white flex flex-col justify-between relative overflow-x-hidden select-none">
-      {/* Background Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-emerald-700/10 blur-[150px] pointer-events-none" />
+  const getHandBadge = (cards: Card[]) => {
+    const evalResult = evaluateHand(cards);
+    switch (evalResult.rank) {
+      case 'trail':
+        return { label: '👑 TRAIL (TRIO)', bg: 'bg-gradient-to-r from-red-600 via-amber-500 to-yellow-400 text-white shadow-amber-500/50' };
+      case 'pure_sequence':
+        return { label: '💎 PURE RUN', bg: 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-emerald-500/50' };
+      case 'sequence':
+        return { label: '⚡ RUN', bg: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-purple-500/50' };
+      case 'color':
+        return { label: '🎨 COLOR', bg: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-blue-500/50' };
+      case 'pair':
+        return { label: '👥 PAIR', bg: 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-orange-500/50' };
+      default:
+        return { label: '🃏 HIGH CARD', bg: 'bg-gradient-to-r from-slate-700 to-slate-600 text-slate-200 shadow-slate-500/20' };
+    }
+  };
 
-      {/* Top Header Navigation Bar */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-black/70 border-b border-white/10 px-4 sm:px-6 py-3">
+  return (
+    <div className="min-h-screen bg-[#060710] text-white flex flex-col justify-between relative overflow-x-hidden select-none">
+      {/* 3D Casino Ambient Stage Lighting */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full bg-emerald-600/10 blur-[160px] pointer-events-none" />
+      <div className="absolute top-1/3 left-1/4 w-72 h-72 rounded-full bg-purple-600/10 blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 w-72 h-72 rounded-full bg-amber-500/10 blur-[140px] pointer-events-none" />
+
+      {/* Floating Animated Emotes Across Table */}
+      <AnimatePresence>
+        {emotes.map((e) => (
+          <motion.div
+            key={e.id}
+            initial={{ opacity: 0, scale: 0.5, y: 0 }}
+            animate={{ opacity: 1, scale: 1.5, y: -120 }}
+            exit={{ opacity: 0, scale: 1.8, y: -180 }}
+            transition={{ duration: 1.8, ease: 'easeOut' }}
+            style={{ left: `${e.x}%`, top: `${e.y}%` }}
+            className="absolute z-50 pointer-events-none text-3xl filter drop-shadow-lg"
+          >
+            {e.emoji}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* Top Header Bar */}
+      <header className="sticky top-0 z-40 backdrop-blur-2xl bg-black/80 border-b border-amber-500/20 px-3 sm:px-6 py-2.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/games/teen-patti/lobby"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold border border-white/10 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-bold border border-white/10 transition-all hover:scale-105"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Leave Table</span>
+              <span className="hidden sm:inline">Lobby</span>
             </Link>
 
             <div>
-              <h1 className="text-sm font-black text-white">{table.tableName}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm font-black text-white tracking-wide">{table.tableName}</h1>
+                <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  3D Table
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-amber-400 font-mono font-bold">
                   Boot: {table.bootAmount.toLocaleString()}
@@ -234,50 +303,89 @@ function TableContent() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Quick Emote Reactions */}
+            <div className="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
+              {['🔥', '🪙', '😎', '👑', '🚀'].map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => triggerEmote(emoji)}
+                  className="w-7 h-7 flex items-center justify-center text-sm hover:scale-125 transition-transform cursor-pointer"
+                  title="Send Reaction"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
             {/* Room Code Badge */}
             <button
               onClick={handleCopyCode}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 text-xs font-mono font-bold transition-all cursor-pointer"
-              title="Click to copy room code"
+              title="Click to copy code"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{table.roomCode}</span>
             </button>
 
-            {/* User Chip Count Pill */}
+            {/* User Chip Count */}
             <Link
               href="/wallet"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono font-bold text-amber-400"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 hover:bg-black/90 border border-amber-400/40 text-xs font-mono font-black text-amber-400 shadow-md shadow-amber-500/20"
             >
               <span>🪙</span>
               <span>{userChips.toLocaleString()}</span>
             </Link>
 
-            {/* Legal Non-Monetary Disclaimer Badge */}
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] font-mono text-amber-300">
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-              <span>Virtual Chips Only • No Real Money Value</span>
-            </div>
+            {/* Fullscreen Button */}
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-xs cursor-pointer"
+              title="Toggle Fullscreen"
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Main Table Stage */}
-      <main className="flex-1 flex flex-col items-center justify-center p-2 sm:p-6 max-w-6xl mx-auto w-full relative">
-        {/* The Oval Felt Gaming Table */}
+      {/* Main 3D Gaming Arena */}
+      <main className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 max-w-6xl mx-auto w-full relative perspective-[1200px]">
+        {/* ============================================================== */}
+        {/* 3D CASINO POKER TABLE STAGE                                    */}
+        {/* ============================================================== */}
         <div
-          className="relative w-full aspect-[4/3] max-w-4xl max-h-[580px] rounded-[100px] sm:rounded-[180px] border-4 border-amber-500/40 shadow-2xl p-4 sm:p-8 flex flex-col items-center justify-between"
+          className="relative w-full aspect-[4/3] max-w-4xl max-h-[560px] rounded-[120px] sm:rounded-[200px] border-[8px] sm:border-[12px] border-[#2e190a] shadow-2xl p-4 sm:p-8 flex flex-col items-center justify-between transition-transform duration-500"
           style={{
-            background: 'radial-gradient(ellipse at center, #063d27 0%, #032416 65%, #02140c 100%)',
-            boxShadow: 'inset 0 0 80px rgba(0,0,0,0.8), 0 25px 60px -15px rgba(0,0,0,0.9), 0 0 60px rgba(16,185,129,0.15)',
+            transform: 'rotateX(10deg) translateZ(0)',
+            transformStyle: 'preserve-3d',
+            background: 'radial-gradient(ellipse at center, #07472c 0%, #042e1d 55%, #02170f 100%)',
+            boxShadow: `
+              inset 0 0 100px rgba(0,0,0,0.9),
+              0 30px 80px -20px rgba(0,0,0,0.95),
+              0 0 40px rgba(16,185,129,0.2),
+              0 0 0 3px rgba(245,158,11,0.3)
+            `,
           }}
         >
-          {/* Table Felt Subtle Inner Border Ring */}
-          <div className="absolute inset-4 sm:inset-6 rounded-[80px] sm:rounded-[160px] border border-emerald-400/20 pointer-events-none" />
+          {/* Real Wood / Padded Leather Rim Highlight */}
+          <div className="absolute inset-1 sm:inset-2 rounded-[110px] sm:rounded-[190px] border border-amber-600/30 pointer-events-none" />
 
-          {/* TOP CENTER: Female Virtual Dealer Aria */}
-          <div className="relative z-20">
+          {/* Golden Felt Inner Betting Boundary Ring */}
+          <div className="absolute inset-5 sm:inset-8 rounded-[90px] sm:rounded-[170px] border-2 border-dashed border-amber-400/25 pointer-events-none flex items-center justify-center">
+            {/* Center Felt Watermark */}
+            <div className="text-center opacity-10 select-none pointer-events-none">
+              <span className="font-serif tracking-[0.3em] text-2xl sm:text-4xl font-black text-amber-200 block">
+                GAMEVERSE
+              </span>
+              <span className="font-mono text-xs sm:text-sm tracking-[0.5em] text-white">
+                ROYAL TEEN PATTI
+              </span>
+            </div>
+          </div>
+
+          {/* TOP CENTER: 3D Virtual Dealer Aria */}
+          <div className="relative z-30 -mt-2 sm:-mt-4">
             <DealerAvatar
               dealer={table.dealer}
               onToggleSound={() => {
@@ -294,34 +402,44 @@ function TableContent() {
             />
           </div>
 
-          {/* CENTER TABLE FELT: Pot Amount & Current Stakes */}
-          <div className="flex flex-col items-center justify-center my-auto z-10 text-center">
-            <span className="text-[10px] sm:text-xs uppercase font-black tracking-widest text-emerald-300/70 mb-1">
-              Main Pot
-            </span>
-            <div className="flex items-center gap-2 px-5 py-2 rounded-2xl bg-black/60 border border-amber-400/40 backdrop-blur-md shadow-xl shadow-amber-500/10">
-              <span className="text-xl sm:text-2xl">🪙</span>
-              <span className="font-mono text-2xl sm:text-4xl font-black text-amber-400">
-                {table.pot.toLocaleString()}
-              </span>
+          {/* CENTER FELT: 3D Pot & Physical Chip Stacks */}
+          <div className="flex flex-col items-center justify-center my-auto z-20 text-center relative">
+            {/* 3D Physical Chip Stacks in Pot */}
+            <div className="flex items-center justify-center -space-x-3 mb-2">
+              <ChipStack3D amount={Math.floor(table.pot * 0.3)} size="md" showLabel={false} />
+              <ChipStack3D amount={table.pot} size="lg" showLabel={false} />
+              <ChipStack3D amount={Math.floor(table.pot * 0.4)} size="md" showLabel={false} />
             </div>
-            <span className="text-[10px] sm:text-xs text-white/40 font-mono mt-1.5">
-              Current Stake: {table.currentStake.toLocaleString()} chips
+
+            {/* Glowing Pot Pill */}
+            <div className="flex items-center gap-2 px-6 py-2 rounded-2xl bg-black/80 border-2 border-amber-400/60 backdrop-blur-xl shadow-2xl shadow-amber-500/30 scale-105">
+              <span className="text-xl sm:text-2xl animate-pulse">🪙</span>
+              <div className="flex flex-col text-left">
+                <span className="text-[9px] uppercase tracking-widest text-emerald-300 font-black leading-none">
+                  MAIN POT
+                </span>
+                <span className="font-mono text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 drop-shadow">
+                  {table.pot.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <span className="text-[10px] sm:text-xs text-amber-300/80 font-mono font-bold mt-1.5 bg-black/50 px-2.5 py-0.5 rounded-full border border-white/10">
+              Current Stake: {table.currentStake.toLocaleString()}
             </span>
           </div>
 
-          {/* 6 PLAYER SEATS AROUND THE TABLE */}
-          {/* Top Left (Seat 0), Top Right (Seat 1) */}
-          {/* Middle Left (Seat 5), Middle Right (Seat 2) */}
-          {/* Bottom Left (Seat 4), Bottom Right (Seat 3) */}
+          {/* ========================================================== */}
+          {/* 6 PLAYER SEATS AROUND THE 3D TABLE                         */}
+          {/* ========================================================== */}
           <div className="absolute inset-0 pointer-events-none">
             {[
               { idx: 0, pos: 'top-2 sm:top-4 left-4 sm:left-12' },
               { idx: 1, pos: 'top-2 sm:top-4 right-4 sm:right-12' },
               { idx: 5, pos: 'top-1/2 -translate-y-1/2 left-2 sm:left-6' },
               { idx: 2, pos: 'top-1/2 -translate-y-1/2 right-2 sm:right-6' },
-              { idx: 4, pos: 'bottom-2 sm:bottom-4 left-8 sm:left-20' },
-              { idx: 3, pos: 'bottom-2 sm:bottom-4 right-8 sm:right-20' },
+              { idx: 4, pos: 'bottom-2 sm:bottom-4 left-6 sm:left-20' },
+              { idx: 3, pos: 'bottom-2 sm:bottom-4 right-6 sm:right-20' },
             ].map(({ idx, pos }) => {
               const p = table.players[idx];
               const isTurn = table.status === 'active' && table.currentTurnSeat === idx;
@@ -330,77 +448,116 @@ function TableContent() {
               return (
                 <div key={idx} className={`absolute ${pos} pointer-events-auto z-20`}>
                   {p ? (
-                    /* Occupied Player Seat */
+                    /* Occupied Player Pod */
                     <div
-                      className={`flex flex-col items-center p-2 rounded-2xl transition-all duration-300 backdrop-blur-md ${
+                      className={`flex flex-col items-center p-2 rounded-2xl transition-all duration-300 backdrop-blur-xl ${
                         isTurn
-                          ? 'ring-2 ring-amber-400 shadow-xl shadow-amber-500/30 scale-105 bg-black/80'
+                          ? 'ring-4 ring-amber-400 shadow-[0_0_35px_rgba(245,158,11,0.6)] scale-110 bg-black/90'
                           : p.state === 'folded'
-                          ? 'opacity-40 bg-black/40'
-                          : 'bg-black/60 border border-white/10'
+                          ? 'opacity-40 grayscale bg-black/50'
+                          : 'bg-black/75 border border-white/15 shadow-xl'
                       }`}
                     >
-                      {/* Avatar & Turn Glow */}
+                      {/* Avatar with Turn Ring */}
                       <div className="relative">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center font-bold text-xs sm:text-sm text-white shadow-md">
-                          {p.avatarUrl || 'GV'}
+                        <div
+                          className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center font-black text-sm text-white shadow-lg ${
+                            isMe
+                              ? 'bg-gradient-to-br from-amber-500 via-orange-600 to-amber-700 ring-2 ring-amber-300'
+                              : 'bg-gradient-to-br from-violet-600 via-purple-700 to-indigo-800'
+                          }`}
+                        >
+                          {p.avatarUrl || '👑'}
                         </div>
+
+                        {/* Turn Timer Pulse Badge */}
                         {isTurn && (
-                          <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-400 animate-ping" />
+                          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 animate-ping ring-2 ring-white" />
+                        )}
+
+                        {/* Dealer / Seat Icon */}
+                        {isMe && (
+                          <span className="absolute -bottom-1 -left-1 bg-amber-500 text-black font-black text-[8px] px-1 rounded">
+                            YOU
+                          </span>
                         )}
                       </div>
 
-                      {/* Username & Player ID */}
-                      <span className="text-xs font-bold text-white max-w-[80px] sm:max-w-[100px] truncate mt-1">
-                        {p.username} {isMe ? '(You)' : ''}
-                      </span>
-                      <span className="text-[10px] text-amber-400 font-mono font-bold">
-                        {p.chips.toLocaleString()}
+                      {/* Username */}
+                      <span className="text-xs font-black text-white max-w-[85px] sm:max-w-[105px] truncate mt-1">
+                        {p.username}
                       </span>
 
-                      {/* State Badge */}
+                      {/* Chip Stack Display */}
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px]">🪙</span>
+                        <span className="text-[10px] sm:text-xs font-mono font-black text-amber-300">
+                          {p.chips.toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* Action State Badge */}
                       <span
-                        className={`text-[8px] sm:text-[9px] uppercase font-black px-2 py-0.5 rounded-full mt-1 ${
+                        className={`text-[8px] uppercase font-black px-2 py-0.5 rounded-full mt-1 tracking-wider ${
                           p.state === 'blind'
-                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-sm shadow-cyan-500/30'
                             : p.state === 'seen'
-                            ? 'bg-violet-500/20 text-violet-300 border border-violet-500/40'
-                            : 'bg-white/10 text-white/40'
+                            ? 'bg-violet-500/20 text-violet-300 border border-violet-400/50 shadow-sm shadow-violet-500/30'
+                            : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                         }`}
                       >
                         {p.state}
                       </span>
 
-                      {/* 3 Player Cards */}
+                      {/* 3 Fanned 3D Cards */}
                       {p.cards && p.cards.length === 3 && (
-                        <div className="flex flex-col items-center">
-                          <div className="flex items-center -space-x-4 mt-2">
-                            {p.cards.map((c, cIdx) => (
-                              <CardView
-                                key={cIdx}
-                                card={c}
-                                isFaceDown={(p.state === 'blind' || !isMe) && table.status !== 'settled'}
-                                size="sm"
-                              />
-                            ))}
+                        <div className="flex flex-col items-center mt-1.5">
+                          <div className="flex items-center -space-x-4">
+                            {p.cards.map((c, cIdx) => {
+                              const fanAngles = [-9, 0, 9];
+                              const shouldHide = (p.state === 'blind' || !isMe) && table.status !== 'settled';
+                              return (
+                                <CardView
+                                  key={cIdx}
+                                  card={c}
+                                  isFaceDown={shouldHide}
+                                  size="sm"
+                                  fanAngle={fanAngles[cIdx]}
+                                  elevateOnHover={!shouldHide}
+                                />
+                              );
+                            })}
                           </div>
+
+                          {/* Hand Rank Badge (When Seen) */}
+                          {isMe && p.state === 'seen' && (
+                            <span
+                              className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md mt-1 shadow-md ${
+                                getHandBadge(p.cards).bg
+                              }`}
+                            >
+                              {getHandBadge(p.cards).label}
+                            </span>
+                          )}
+
+                          {/* Blind Indicator */}
                           {isMe && p.state === 'blind' && table.status === 'active' && (
-                            <span className="text-[9px] font-black tracking-widest text-amber-400 uppercase mt-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 animate-pulse">
-                              BLIND (CARDS HIDDEN)
+                            <span className="text-[8px] font-black tracking-widest text-cyan-300 uppercase mt-1 px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 animate-pulse">
+                              🕶️ PLAYING BLIND
                             </span>
                           )}
                         </div>
                       )}
                     </div>
                   ) : (
-                    /* Empty Seat */
+                    /* Open Empty Seat */
                     <button
                       onClick={() => handleSitDown(idx)}
                       disabled={mySeatIndex !== -1}
-                      className="px-3 py-2 rounded-2xl bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                      className="px-3.5 py-2.5 rounded-2xl bg-emerald-950/50 hover:bg-emerald-900/80 border-2 border-emerald-500/40 text-emerald-300 text-xs font-black flex flex-col items-center gap-1 transition-all hover:scale-105 cursor-pointer disabled:opacity-30 disabled:pointer-events-none shadow-lg shadow-emerald-950/40"
                     >
-                      <Users className="w-4 h-4" />
-                      <span>Seat #{idx + 1}</span>
+                      <Users className="w-4 h-4 text-emerald-400" />
+                      <span>Take Seat #{idx + 1}</span>
                     </button>
                   )}
                 </div>
@@ -409,131 +566,137 @@ function TableContent() {
           </div>
         </div>
 
-        {/* Winner Announcement Overlay */}
+        {/* 3D Round Winner Celebration Modal */}
         <AnimatePresence>
           {table.status === 'settled' && table.winnerResult && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, scale: 0.7, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute z-30 p-6 sm:p-8 rounded-3xl bg-black/90 border-2 border-amber-400 backdrop-blur-2xl text-center shadow-2xl max-w-sm w-full mx-4"
+              className="absolute z-40 p-6 sm:p-8 rounded-3xl bg-black/95 border-2 border-amber-400 backdrop-blur-2xl text-center shadow-2xl max-w-md w-full mx-4"
               style={{
-                boxShadow: '0 25px 60px -15px rgba(0,0,0,0.9), 0 0 60px rgba(245,158,11,0.4)',
+                boxShadow: '0 30px 80px -10px rgba(0,0,0,0.95), 0 0 60px rgba(245,158,11,0.5)',
               }}
             >
-              <Trophy className="w-12 h-12 text-amber-400 mx-auto mb-2 animate-bounce" />
-              <span className="text-xs font-black uppercase text-amber-300 tracking-widest block mb-1">
-                ROUND WINNER
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-amber-500/50 animate-bounce">
+                <Trophy className="w-9 h-9 text-black" />
+              </div>
+
+              <span className="text-xs font-black uppercase text-amber-300 tracking-[0.2em] block mb-1">
+                ★ ROUND WINNER ★
               </span>
-              <h2 className="text-2xl font-black text-white mb-1">
+              <h2 className="text-2xl sm:text-3xl font-black text-white mb-1">
                 {table.winnerResult.winnerName}
               </h2>
-              <span className="text-xs text-violet-300 font-bold block mb-4">
+              <span className="text-sm text-violet-300 font-bold block mb-4">
                 Won with: {table.winnerResult.handName}
               </span>
 
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 mb-6 font-mono">
-                <span className="text-xs text-white/50 block">Pot Payout</span>
-                <span className="text-2xl font-black text-amber-400">
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-400/40 mb-6 font-mono">
+                <span className="text-xs text-amber-300/70 block">Total Pot Payout</span>
+                <span className="text-2xl sm:text-3xl font-black text-amber-400">
                   +{table.winnerResult.potAmount.toLocaleString()} Chips
                 </span>
               </div>
 
               <button
                 onClick={handleStartRound}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/30 transition-all cursor-pointer"
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs uppercase tracking-wider shadow-xl shadow-amber-500/40 transition-all hover:scale-[1.02] cursor-pointer"
               >
-                Deal Next Round
+                Deal Next Round 🎴
               </button>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
-      {/* BOTTOM ACTION CONTROLS HUD */}
-      <footer className="sticky bottom-0 z-40 backdrop-blur-xl bg-black/80 border-t border-white/10 p-3 sm:p-4">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* ============================================================== */}
+      {/* BOTTOM ACTION DOCK (FUTURISTIC 3D GAMING HUD)                  */}
+      {/* ============================================================== */}
+      <footer className="sticky bottom-0 z-40 backdrop-blur-2xl bg-black/90 border-t border-amber-500/30 p-3 sm:p-4 shadow-2xl">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           {mySeatIndex === -1 ? (
-            /* User Not Seated Notice */
+            /* User Spectating Mode */
             <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <span className="text-white/60">
-                You are currently spectating. Click any open seat on the table to join the action.
+              <span className="text-white/70">
+                You are currently spectating. Click any open seat on the table to join the game!
               </span>
               <button
                 onClick={handleAddBot}
-                className="px-4 py-2 rounded-xl bg-violet-600/30 hover:bg-violet-600/50 text-violet-300 border border-violet-500/40 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-violet-600/30 hover:bg-violet-600/50 text-violet-300 border border-violet-500/40 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Bot className="w-4 h-4" />
                 <span>Add AI Bot</span>
               </button>
             </div>
           ) : table.status !== 'active' ? (
-            /* Round Waiting State */
+            /* Round Waiting Stage */
             <div className="w-full flex items-center justify-between gap-3">
-              <span className="text-xs text-white/60 font-semibold">
-                Waiting to deal next round. Seated: {table.players.filter((p) => p !== null).length}/6
+              <span className="text-xs text-white/70 font-semibold">
+                Round finished. Seated: {table.players.filter((p) => p !== null).length}/6 players
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleAddBot}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Bot className="w-4 h-4" />
                   <span>Add Bot</span>
                 </button>
                 <button
                   onClick={handleStartRound}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/30 transition-all cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/30 transition-all hover:scale-105 cursor-pointer"
                 >
-                  Deal Hand
+                  Deal Hand 🎴
                 </button>
               </div>
             </div>
           ) : (
-            /* Active Round Controls */
+            /* Active Live Hand Controls */
             <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3">
               {/* Left Side: See Cards Button */}
               <div className="flex items-center gap-2">
                 {myPlayer?.state === 'blind' ? (
                   <button
                     onClick={handleSeeCards}
-                    className="px-4 py-2 rounded-xl bg-violet-600/30 hover:bg-violet-600/50 text-violet-300 border border-violet-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider border border-violet-400/40 shadow-lg shadow-violet-600/30 flex items-center gap-1.5 transition-all hover:scale-105 cursor-pointer"
                   >
                     <Eye className="w-4 h-4" />
-                    <span>See Cards</span>
+                    <span>See Cards (Reveals)</span>
                   </button>
                 ) : (
                   myPlayer?.cards && (
-                    <div className="text-xs font-bold text-violet-300 font-mono">
-                      Hand: {evaluateHand(myPlayer.cards).name}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-mono font-bold text-violet-300">
+                      <span>My Hand:</span>
+                      <span className="text-amber-400">{evaluateHand(myPlayer.cards).name}</span>
                     </div>
                   )
                 )}
               </div>
 
-              {/* Right Side: Betting & Action Buttons */}
-              <div className="flex items-center gap-2">
+              {/* Right Side: Bet, Raise, Side Show, Fold */}
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 {/* Pack / Fold */}
                 <button
                   onClick={handleFold}
                   disabled={!isMyTurn}
-                  className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold text-xs uppercase cursor-pointer disabled:opacity-40"
+                  className="px-4 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-black text-xs uppercase transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Pack (Fold)
                 </button>
 
-                {/* Showdown / Show (Available when exactly 2 active players left) */}
+                {/* Showdown (when 2 players remain) */}
                 {activePlayersCount === 2 && (
                   <button
                     onClick={handleShowdown}
                     disabled={!isMyTurn || (myPlayer?.chips || 0) < limits.minBet}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/40 border border-cyan-400/50 cursor-pointer disabled:opacity-40 animate-pulse flex items-center gap-1.5"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/40 border border-cyan-400/50 transition-all hover:scale-105 cursor-pointer disabled:opacity-40 animate-pulse flex items-center gap-1.5"
                   >
                     <span>SHOW ({limits.minBet.toLocaleString()})</span>
                   </button>
                 )}
 
-                {/* Side Show (Available when more than 2 active players left) */}
+                {/* Side Show (when > 2 players remain) */}
                 {activePlayersCount > 2 && (
                   <button
                     onClick={handleSideShow}
@@ -545,28 +708,28 @@ function TableContent() {
                         ? `${prevPlayer?.username || 'Previous player'} is playing Blind (cannot request Side Show)`
                         : `Request Side Show against ${prevPlayer?.username}`
                     }
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-purple-600/30 border border-purple-400/40 cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-purple-600/30 border border-purple-400/40 transition-all hover:scale-105 cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
                   >
                     <span>SIDE SHOW ({limits.minBet.toLocaleString()})</span>
                   </button>
                 )}
 
-                {/* Call / Bet (Blind or Chaal) */}
+                {/* Main Action: Chaal or Blind Bet */}
                 <button
                   onClick={() => handlePlaceBet(limits.minBet)}
                   disabled={!isMyTurn || (myPlayer?.chips || 0) < limits.minBet}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/30 cursor-pointer disabled:opacity-40"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs uppercase tracking-wider shadow-xl shadow-amber-500/40 transition-all hover:scale-105 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {limits.label} ({limits.minBet.toLocaleString()})
                 </button>
 
-                {/* Double / Raise */}
+                {/* Raise 2X */}
                 <button
                   onClick={() => handlePlaceBet(limits.maxBet)}
                   disabled={!isMyTurn || (myPlayer?.chips || 0) < limits.maxBet}
-                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase cursor-pointer disabled:opacity-40"
+                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-xs uppercase transition-all hover:scale-105 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Raise ({limits.maxBet.toLocaleString()})
+                  Raise 2X ({limits.maxBet.toLocaleString()})
                 </button>
               </div>
             </div>
