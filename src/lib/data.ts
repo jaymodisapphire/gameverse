@@ -1,0 +1,98 @@
+import { Game, Friend, LeaderboardPlayer, StatItem } from '@/types';
+
+export const GAMES: Game[] = [
+  {
+    id: 'ludo',
+    title: 'Ludo',
+    description: 'Classic strategy board game. Race your tokens home while blocking opponents in this timeless multiplayer classic.',
+    maxPlayers: 4,
+    category: 'Board',
+    hasAI: true,
+    hasMultiplayer: true,
+    gradient: 'from-violet-600 via-purple-600 to-indigo-700',
+    accentColor: '#8b5cf6',
+    emoji: '🎲',
+    route: '/games/ludo',
+    lastPlayed: '2 hours ago',
+  },
+  {
+    id: 'snake-ladder',
+    title: 'Snake & Ladder',
+    description: 'Navigate through snakes and climb ladders in this exciting game of chance. Supports up to 10 players!',
+    maxPlayers: 10,
+    category: 'Board',
+    hasAI: true,
+    hasMultiplayer: true,
+    gradient: 'from-emerald-500 via-teal-600 to-cyan-700',
+    accentColor: '#10b981',
+    emoji: '🐍',
+    route: '/games/snake-ladder',
+    lastPlayed: '1 day ago',
+  },
+  {
+    id: 'tic-tac-toe',
+    title: 'Tic Tac Toe',
+    description: 'The ultimate battle of X vs O. Challenge a friend or test your strategy against our intelligent AI.',
+    maxPlayers: 2,
+    category: 'Strategy',
+    hasAI: true,
+    hasMultiplayer: true,
+    gradient: 'from-rose-500 via-pink-600 to-fuchsia-700',
+    accentColor: '#f43f5e',
+    emoji: '❌',
+    route: '/games/tic-tac-toe',
+    lastPlayed: '3 hours ago',
+  },
+  {
+    id: 'card-games',
+    title: 'Card Games',
+    description: 'Premium card game collection with multiple variants. Configurable player count for endless fun.',
+    maxPlayers: 8,
+    category: 'Cards',
+    hasAI: true,
+    hasMultiplayer: true,
+    gradient: 'from-amber-500 via-orange-600 to-red-700',
+    accentColor: '#f59e0b',
+    emoji: '🃏',
+    route: '/games/card-games',
+    lastPlayed: '5 hours ago',
+  },
+  {
+    id: 'racing',
+    title: 'Racing Games',
+    description: 'High-speed multiplayer racing action. Compete against up to 10 players in thrilling race circuits.',
+    maxPlayers: 10,
+    category: 'Racing',
+    hasAI: true,
+    hasMultiplayer: true,
+    gradient: 'from-blue-500 via-cyan-600 to-sky-700',
+    accentColor: '#3b82f6',
+    emoji: '🏎️',
+    route: '/games/racing',
+    lastPlayed: 'Just now',
+  },
+];
+
+export const MOCK_FRIENDS: Friend[] = [
+  { id: '1', username: 'ShadowKnight', avatar: 'SK', isOnline: true, currentGame: 'Ludo', level: 42 },
+  { id: '2', username: 'PixelQueen', avatar: 'PQ', isOnline: true, currentGame: 'Racing', level: 38 },
+  { id: '3', username: 'NeonBlade', avatar: 'NB', isOnline: true, currentGame: 'Card Games', level: 55 },
+  { id: '4', username: 'CyberWolf', avatar: 'CW', isOnline: false, level: 29 },
+  { id: '5', username: 'StarForge', avatar: 'SF', isOnline: true, currentGame: 'Tic Tac Toe', level: 67 },
+  { id: '6', username: 'VoidRunner', avatar: 'VR', isOnline: false, level: 33 },
+];
+
+export const LEADERBOARD: LeaderboardPlayer[] = [
+  { rank: 1, username: 'StarForge', avatar: 'SF', wins: 2847, winRate: 78.4, level: 67, totalGames: 3631 },
+  { rank: 2, username: 'NeonBlade', avatar: 'NB', wins: 2103, winRate: 72.1, level: 55, totalGames: 2917 },
+  { rank: 3, username: 'ShadowKnight', avatar: 'SK', wins: 1856, winRate: 69.3, level: 42, totalGames: 2678 },
+  { rank: 4, username: 'PixelQueen', avatar: 'PQ', wins: 1432, winRate: 65.8, level: 38, totalGames: 2177 },
+  { rank: 5, username: 'CyberWolf', avatar: 'CW', wins: 1198, winRate: 61.2, level: 29, totalGames: 1958 },
+];
+
+export const STATS: StatItem[] = [
+  { label: 'Total Games Played', value: 128540, icon: '🎮' },
+  { label: 'Active Players', value: 4821, icon: '👥' },
+  { label: 'Games Available', value: 5, icon: '🕹️' },
+  { label: 'Online Friends', value: 4, suffix: ' / 6', icon: '🟢' },
+];
