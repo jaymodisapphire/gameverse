@@ -4,10 +4,15 @@ import { isSupabaseConfigured } from '@/lib/supabase/config';
 
 export async function GET(request: NextRequest) {
   try {
-    const isMasterAdminCookie =
-      request.cookies.get('gameverse_admin_session')?.value === 'true';
-
     if (!isSupabaseConfigured()) {
+      const isMasterAdminCookie =
+        request.cookies.get('gameverse_admin_session')?.value === 'true';
+      if (!isMasterAdminCookie) {
+        return NextResponse.json(
+          { error: 'Unauthorized: Demo administrator session required.' },
+          { status: 403 }
+        );
+      }
       return NextResponse.json({ requests: [] });
     }
 
@@ -16,23 +21,23 @@ export async function GET(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Verify admin privileges
-    let isAuthorized = isMasterAdminCookie;
-    if (!isAuthorized && user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin, role')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profile?.is_admin || profile?.role === 'admin') {
-        isAuthorized = true;
-      }
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      );
     }
 
-    if (!isAuthorized) {
+    // Verify admin privileges strictly from verified Supabase session profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin, role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!profile?.is_admin && profile?.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Unauthorized: Administrator privileges required.' },
+        { error: 'Forbidden: Administrator privileges required.' },
         { status: 403 }
       );
     }

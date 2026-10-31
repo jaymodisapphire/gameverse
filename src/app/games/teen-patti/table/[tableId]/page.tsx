@@ -445,11 +445,15 @@ function TableContent() {
               <span>{table.roomCode}</span>
             </button>
 
-            {/* User Chip Count */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 border border-amber-400/40 text-xs font-mono font-black text-amber-400 shadow-md shadow-amber-500/20">
+            {/* User Chip Count (Link to Vault) */}
+            <Link
+              href="/wallet"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 border border-amber-400/40 text-xs font-mono font-black text-amber-400 shadow-md shadow-amber-500/20 hover:border-amber-400 transition-colors"
+              title="View Virtual Chip Vault"
+            >
               <span>🪙</span>
               <span>{userChips.toLocaleString()}</span>
-            </div>
+            </Link>
 
             {/* Fullscreen Button */}
             <button

@@ -12,7 +12,13 @@ interface DealerAvatarProps {
 }
 
 export function DealerAvatar({ dealer, onToggleSound, onToggleAnimations }: DealerAvatarProps) {
-  const { message, emotion, isMuted, animationsEnabled } = dealer;
+  const safeDealer = dealer || {
+    message: 'Welcome to the High Stakes GAMEVERSE Table! Take a seat to play.',
+    emotion: 'idle',
+    isMuted: false,
+    animationsEnabled: true,
+  };
+  const { message, emotion, isMuted, animationsEnabled } = safeDealer;
 
   return (
     <div className="relative flex flex-col items-center justify-center select-none z-20">

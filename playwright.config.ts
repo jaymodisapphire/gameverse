@@ -8,12 +8,12 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:4000',
+    baseURL: 'http://localhost:4000',
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npx next dev -p 4000 -H 127.0.0.1',
-    url: 'http://127.0.0.1:4000',
+    command: 'npx next dev -p 4000',
+    url: 'http://localhost:4000',
     reuseExistingServer: true,
     timeout: 120000,
   },

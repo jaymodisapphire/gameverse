@@ -110,7 +110,7 @@ export default function GamesPortalPage() {
         </div>
 
         {/* Continue Playing Section (If player has recent sessions) */}
-        {continuePlayingList.length > 0 && (
+        {!searchQuery && selectedCategory === 'all' && continuePlayingList.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center gap-2 mb-4">
               <Clock className="w-4 h-4 text-cyan-400" />

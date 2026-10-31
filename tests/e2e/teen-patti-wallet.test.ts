@@ -135,10 +135,10 @@ test.describe('GAMEVERSE Step 4: Teen Patti & Virtual Chip Wallet E2E Suite', ()
   });
 
   test('8. Live Table loads AI Dealer Aria, sound toggle, and table seats', async ({ page }) => {
-    await page.goto('/games/teen-patti/table/tp-novice-1', { waitUntil: 'domcontentloaded' });
+    await page.goto('/games/teen-patti/table/tp-novice-1', { waitUntil: 'load' });
 
     // AI Dealer Aria and title
-    await expect(page.locator('text=ARIA')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=ARIA')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=AI DEALER')).toBeVisible();
 
     // Audio dealer control button

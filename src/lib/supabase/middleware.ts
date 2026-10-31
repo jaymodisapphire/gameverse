@@ -73,10 +73,15 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Protected routes: user must be logged in
-  const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/profile');
+  const isProtectedRoute =
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/profile') ||
+    pathname.startsWith('/admin');
 
-  // Master Admin Cookie Bypass (ensures guaranteed admin access)
-  const isMasterAdminCookie = request.cookies.get('gameverse_admin_session')?.value === 'true';
+  // Master Admin Cookie Bypass (only valid for offline demo / unconfigured mode)
+  const isMasterAdminCookie =
+    !isSupabaseConfigured() &&
+    request.cookies.get('gameverse_admin_session')?.value === 'true';
 
   // Auth routes: authenticated users should be redirected to dashboard
   const isAuthRoute =

@@ -15,6 +15,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isSupabaseConfigured()) {
+      const isMasterAdminCookie =
+        request.cookies.get('gameverse_admin_session')?.value === 'true';
+      if (!isMasterAdminCookie) {
+        return NextResponse.json(
+          { error: 'Unauthorized: Demo administrator session required.' },
+          { status: 403 }
+        );
+      }
       return NextResponse.json({
         success: true,
         status: action === 'approve' ? 'approved' : 'rejected',
@@ -22,48 +30,33 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const isMasterAdminCookie =
-      request.cookies.get('gameverse_admin_session')?.value === 'true';
-
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Verify admin access
-    let isAuthorized = isMasterAdminCookie;
-    let effectiveAdminId: string | null = user?.id || null;
-
-    if (!isAuthorized && user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, is_admin, role')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profile?.is_admin || profile?.role === 'admin') {
-        isAuthorized = true;
-        effectiveAdminId = profile.id;
-      }
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      );
     }
 
-    if (!isAuthorized) {
+    // Verify admin access strictly from database profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, is_admin, role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!profile?.is_admin && profile?.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Unauthorized: Administrator privileges required.' },
+        { error: 'Forbidden: Administrator privileges required.' },
         { status: 403 }
       );
     }
 
-    // If master admin cookie, ensure we have an admin UUID for the audit column
-    if (!effectiveAdminId) {
-      const { data: anyAdmin } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('is_admin', true)
-        .limit(1)
-        .maybeSingle();
-      effectiveAdminId = anyAdmin?.id || null;
-    }
+    const effectiveAdminId = profile.id;
 
     // Call atomic stored procedure
     const { data, error } = await supabase.rpc('admin_review_chip_request', {

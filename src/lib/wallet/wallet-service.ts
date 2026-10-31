@@ -199,8 +199,10 @@ export async function submitChipRequest(
     return { success: false, error: 'Requested amount must be between 1,000 and 1,000,000 virtual chips.' };
   }
 
-  if (!isSupabaseConfigured()) {
-    // Demo mode persistence
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+
+  if (!isSupabaseConfigured() || !isUuid) {
+    // Demo mode / guest persistence
     try {
       const raw = typeof window !== 'undefined' ? localStorage.getItem(DEMO_REQ_KEY) : null;
       const list: ChipRequest[] = raw ? JSON.parse(raw) : [];
@@ -356,20 +358,35 @@ export async function adminSearchPlayers(query: string = ''): Promise<AdminPlaye
 
   const supabase = createClient();
   try {
-    let req = supabase.from('profiles').select('*, player_wallets(balance)');
+    let req = supabase.from('profiles').select('id, username, player_id, avatar_url, level, total_games, is_admin, created_at');
     if (q) {
       req = req.or(`username.ilike.%${q}%,player_id.ilike.%${q}%`);
     }
 
-    const { data, error } = await req.limit(20);
-    if (error || !data) return [];
+    const { data: profiles, error } = await req.limit(20);
+    if (error || !profiles) return [];
 
-    return data.map((p: any) => ({
+    // Safely fetch balances for matching players without relational schema join error
+    const userIds = profiles.map((p: any) => p.id);
+    const balanceMap = new Map<string, number>();
+
+    if (userIds.length > 0) {
+      const { data: wallets } = await supabase
+        .from('player_wallets')
+        .select('user_id, balance')
+        .in('user_id', userIds);
+
+      if (wallets) {
+        wallets.forEach((w: any) => balanceMap.set(w.user_id, Number(w.balance)));
+      }
+    }
+
+    return profiles.map((p: any) => ({
       userId: p.id,
       username: p.username,
       playerId: p.player_id,
       avatarUrl: p.avatar_url,
-      balance: p.player_wallets?.[0]?.balance ? Number(p.player_wallets[0].balance) : 100000,
+      balance: balanceMap.has(p.id) ? balanceMap.get(p.id)! : 100000,
       level: p.level || 1,
       totalGames: p.total_games || 0,
       isAdmin: Boolean(p.is_admin),
