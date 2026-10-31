@@ -33,6 +33,7 @@ import {
   getLocalHighScore,
   LocalSessionRecord,
 } from '@/lib/games/sessions';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 const AVATAR_PRESETS = ['GV', 'SK', 'PQ', 'NB', 'CW', 'SF', 'VR'];
 
@@ -209,9 +210,11 @@ export default function DashboardPage() {
             {/* Player Info Left */}
             <div className="flex items-center gap-5">
               <div className="relative">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 flex items-center justify-center text-white text-2xl font-black shadow-xl shadow-violet-600/30 border border-white/20">
-                  {selectedAvatar}
-                </div>
+                <UserAvatar
+                  src={selectedAvatar}
+                  name={username}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 text-white text-2xl font-black shadow-xl shadow-violet-600/30 border border-white/20"
+                />
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-black flex items-center justify-center">
                   <span className="w-2 h-2 rounded-full bg-emerald-100 animate-pulse" />
                 </div>

@@ -20,6 +20,7 @@ import Footer from '@/components/Footer';
 import { useAuth } from '@/lib/auth/auth-context';
 import { adminSearchPlayers, adminGrantChips } from '@/lib/wallet/wallet-service';
 import { AdminPlayerView } from '@/lib/wallet/types';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 export default function AdminChipsPage() {
   const { user, profile } = useAuth();
@@ -162,9 +163,11 @@ export default function AdminChipsPage() {
               <div>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center font-bold text-sm text-white">
-                      {p.avatarUrl || 'GV'}
-                    </div>
+                    <UserAvatar
+                      src={p.avatarUrl}
+                      name={p.username}
+                      className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 font-bold text-sm text-white"
+                    />
                     <div>
                       <h3 className="font-black text-white text-base">{p.username}</h3>
                       <span className="text-xs text-violet-400 font-mono">{p.playerId}</span>

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
 import { getPlayerWallet } from '@/lib/wallet/wallet-service';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 const NAV_LINKS = [
   { label: 'Home', href: '#home', icon: Home },
@@ -241,9 +242,11 @@ export default function Navbar() {
                   onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); }}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center font-bold text-xs text-white">
-                    {playerAvatar}
-                  </div>
+                  <UserAvatar
+                    src={playerAvatar}
+                    name={displayName}
+                    className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-xs text-white border border-white/10"
+                  />
                   <span className="text-white/90 text-sm font-semibold max-w-[100px] truncate">{displayName}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-mono font-bold">
                     Lv.{playerLevel}

@@ -43,6 +43,7 @@ import {
 import { TeenPattiTableState, TablePlayer, Card } from '@/lib/teen-patti/types';
 import { DealerAvatar } from '@/components/teen-patti/DealerAvatar';
 import { CardView } from '@/components/teen-patti/CardView';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { ChipStack3D } from '@/components/teen-patti/ChipStack3D';
 import { getBettingLimits, evaluateHand } from '@/lib/teen-patti/engine';
 import { getPlayerWallet, submitChipRequest } from '@/lib/wallet/wallet-service';
@@ -578,15 +579,15 @@ function TableContent() {
                     >
                       {/* Avatar with Turn Ring */}
                       <div className="relative">
-                        <div
-                          className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center font-black text-sm text-white shadow-lg ${
+                        <UserAvatar
+                          src={p.avatarUrl || '👑'}
+                          name={p.username}
+                          className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl text-sm font-black text-white shadow-lg ${
                             isMe
                               ? 'bg-gradient-to-br from-amber-500 via-orange-600 to-amber-700 ring-2 ring-amber-300'
                               : 'bg-gradient-to-br from-violet-600 via-purple-700 to-indigo-800'
                           }`}
-                        >
-                          {p.avatarUrl || '👑'}
-                        </div>
+                        />
 
                         {/* Turn Timer Pulse Badge */}
                         {isTurn && (
