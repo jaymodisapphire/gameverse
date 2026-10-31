@@ -71,6 +71,20 @@ export const GAMES: Game[] = [
     route: '/play/neon-racer',
     lastPlayed: 'Just now',
   },
+  {
+    id: 'connect-four',
+    title: 'Cyber Connect Four',
+    description: 'Vertical tactical duel. Drop quantum discs into 7 columns to align 4 in a row. Play online custom rooms or vs AI Sentinel.',
+    maxPlayers: 2,
+    category: 'Strategy',
+    hasAI: true,
+    hasMultiplayer: true,
+    gradient: 'from-cyan-500 via-blue-600 to-indigo-700',
+    accentColor: '#06b6d4',
+    emoji: '🔴',
+    route: '/games/connect-four',
+    lastPlayed: 'Recently added',
+  },
 ];
 
 export const MOCK_FRIENDS: Friend[] = [
@@ -93,6 +107,6 @@ export const LEADERBOARD: LeaderboardPlayer[] = [
 export const STATS: StatItem[] = [
   { label: 'Total Games Played', value: 128540, icon: '🎮' },
   { label: 'Active Players', value: 4821, icon: '👥' },
-  { label: 'Games Available', value: 5, icon: '🕹️' },
+  { label: 'Games Available', value: 6, icon: '🕹️' },
   { label: 'Online Friends', value: 4, suffix: ' / 6', icon: '🟢' },
 ];

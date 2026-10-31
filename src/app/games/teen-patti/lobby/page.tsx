@@ -149,7 +149,7 @@ export default function TeenPattiLobbyPage() {
                   Your Chips
                 </span>
                 <span className="font-mono font-black text-white text-base">
-                  {chips.toLocaleString()}
+                  {chips.toLocaleString('en-US')}
                 </span>
               </div>
               <Link

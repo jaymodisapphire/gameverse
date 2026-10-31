@@ -108,6 +108,22 @@ export const CATALOG_GAMES: CatalogGame[] = [
     emoji: '🃏',
     tags: ['Card', 'Multiplayer', 'Casino', 'Live Dealer'],
   },
+  {
+    id: 'g-connect-four',
+    slug: 'connect-four',
+    title: 'Cyber Connect Four',
+    description: 'Vertical tactical duel. Drop quantum discs into 7 columns to align 4 in a row. Play online custom rooms or vs AI Sentinel.',
+    instructions: 'Select any of the 7 columns to drop your quantum disc. First player to connect 4 discs horizontally, vertically, or diagonally wins.',
+    category: 'classic',
+    accentColor: '#06b6d4',
+    supportedInputs: ['mouse', 'touch'],
+    engine: 'html5-canvas',
+    isPublished: true,
+    playsCount: 11200,
+    rating: 4.89,
+    emoji: '🔴',
+    tags: ['Strategy', 'Multiplayer', 'AI', 'Custom Rooms'],
+  },
 ];
 
 export function getGameBySlug(slug: string): CatalogGame | undefined {

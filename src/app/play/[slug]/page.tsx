@@ -70,6 +70,10 @@ function GameLauncherContent() {
       router.replace('/games/tic-tac-toe');
       return;
     }
+    if (slug === 'connect-four') {
+      router.replace('/games/connect-four');
+      return;
+    }
     if (!game) return;
     const initialHigh = getLocalHighScore(game.slug);
     setHighScore(initialHigh);
