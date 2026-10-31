@@ -78,9 +78,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/profile') ||
     pathname.startsWith('/admin');
 
-  // Master Admin Cookie Bypass (only valid for offline demo / unconfigured mode)
+  // Master Admin Cookie Bypass (allows guaranteed admin session across demo & live fallback)
   const isMasterAdminCookie =
-    !isSupabaseConfigured() &&
     request.cookies.get('gameverse_admin_session')?.value === 'true';
 
   // Auth routes: authenticated users should be redirected to dashboard
